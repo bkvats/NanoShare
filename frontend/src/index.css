@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+.btn-white-black {
+    @apply bg-white text-black
+}
+.text-white-light {
+    @apply text-opacity-70 text-white
+}
+@tailwind utilities;
