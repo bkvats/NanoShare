@@ -39,8 +39,8 @@ export default function Home() {
     ]
     return (
         <>
-            <div className="mt-2 flex justify-center md:items-center border-light border-t-0 border-l-0 border-r-0">
-                <div className="absolute lg:w-[70%] z-10 flex flex-col mt-20 md:mt-0 items-center gap-4">
+            <div className="lg:mt-2 flex justify-center md:items-center border-light border-t-0 border-l-0 border-r-0">
+                <div className="absolute lg:w-[70%] z-10 flex flex-col mt-32 lg:mt-0 items-center gap-4">
                     <h1 className="font-bold text-6xl text-center">Share files anywhere easily!</h1>
                     <span className="text-white-light w-3/4 text-center text-lg">You can now share your files directly from your device to anywhere. It's safe, peer-to-peer and your data does'nt even gets stored on servers.</span>
                     <div className="flex gap-4 text-sm lg:text-xl mt-8">
@@ -55,12 +55,12 @@ export default function Home() {
                 <div className="text-2xl lg:text-3xl font-medium flex gap-2 flex-wrap justify-center items-center">
                     Share your <span className="flex items-center gap-2 text-white-light font-light border-light py-2 px-4 rounded-full text-lg"><SiFiles /> Files</span> without compromising <span className="flex items-center gap-2 text-md text-white-light font-light border-light py-2 px-4 rounded-full text-lg"><MdOutlineSecurity /> Security</span>
                 </div>
-                <img src="src/pages/images/line.gif" alt="" />
+                    <img src="src/pages/images/line.gif" alt="" className="w-[90%] mt-2 lg:w-auto"/>
             </div>
             <div className="lg:grid grid-cols-2 mx-auto lg:w-[80%]">
                 {
                     stepsCard.map((i) => (
-                        <div className="border-light p-8 pb-2">
+                        <div className="lg:border border-white border-opacity-20 p-8 pb-2">
                             <span className="flex gap-2 items-center text-white-light">
                                 {i.icon}
                                 {i.title}
