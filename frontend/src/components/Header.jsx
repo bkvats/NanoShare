@@ -65,10 +65,12 @@ export default function Header() {
         <>
             <header className="absolute top-0 hidden min-h-14 z-50 bg-[#00000000] lg:flex w-full items-center py-2 justify-between px-16">
                 <div className="flex items-center gap-2">
-                    <img src="src/components/images/logo.png" alt="" width={30} />
-                    <span className="text-2xl font-bold">
-                        NanoShare
-                    </span>
+                    <NavLink to={"/"} className={"flex items-center gap-1 mx-4"}>
+                        <img src="https://res.cloudinary.com/duhmeadz6/image/upload/v1731116089/logo_hdf34r.png" alt="" width={30} />
+                        <span className="text-2xl font-bold">
+                            NanoShare
+                        </span>
+                    </NavLink>
                     <nav>
                         <ul className="flex gap-8 mx-4 text-white-light font-light text-md items-center h-6">
                             {
@@ -83,7 +85,7 @@ export default function Header() {
             </header>
             <header className={`min-h-20 ${showSideBar && "bg-black"} absolute top-0 w-full flex items-center justify-between lg:hidden z-50`}>
                 <NavLink to={"/"} className={"flex items-center gap-1 mx-4"}>
-                    <img src="src/components/images/logo.png" alt="" width={30} />
+                    <img src="https://res.cloudinary.com/duhmeadz6/image/upload/v1731116089/logo_hdf34r.png" alt="" width={30} />
                     <span className="text-2xl font-bold">
                         NanoShare
                     </span>

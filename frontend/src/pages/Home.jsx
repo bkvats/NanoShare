@@ -13,28 +13,28 @@ export default function Home() {
             title: "Upload file",
             heading: "From your device to anywhere !",
             subHeading: "Just drop your file here and let the magic begin.",
-            imgUrl: "drop-file.png"
+            imgUrl: "https://res.cloudinary.com/duhmeadz6/image/upload/v1731116184/drop-file_tmdctp.png"
         },
         {
             icon: <MdOutlinePassword size={"1rem"} />,
             title: "Get the code",
             heading: "A unique code will be generated.",
             subHeading: "This unique 6 digits code will help you at other end to recieve the file.",
-            imgUrl: "lock.png"
+            imgUrl: "https://res.cloudinary.com/duhmeadz6/image/upload/v1731116178/lock_xd6bza.png"
         },
         {
             icon: <MdOutlineDevices size={"1rem"} />,
             title: "Use code",
             heading: "Open NanoShare on another device and enter unique code.",
             subHeading: "The 6 digits code will be verified and then the file will ready to sent.",
-            imgUrl: "unlock.png"
+            imgUrl: "https://res.cloudinary.com/duhmeadz6/image/upload/v1731116177/unlock_fch2fi.png"
         },
         {
             icon: <AiFillThunderbolt size={"1rem"} />,
             title: "Get file",
             heading: "Recieve the file with lighting fast speed.",
             subHeading: "Downloading will be get started and you will get the file on another device easily.",
-            imgUrl: "get-file.png"
+            imgUrl: "https://res.cloudinary.com/duhmeadz6/image/upload/v1731116178/get-file_ojonlm.png"
         }
     ]
     return (
@@ -48,7 +48,7 @@ export default function Home() {
                         <button className="relative pl-9 pr-4 py-2 bg-black border text-white rounded-full hover:bg-gray-900 transition hover:scale-110"><IoTriangleSharp className="absolute left-3 lg:top-[12px] rotate-180" size={"18px"} />Recieve a file</button>
                     </div>
                 </div>
-                <video src="src/pages/images/space-bg.mp4" className="min-h-screen min-w-full object-cover object-center" autoPlay muted loop>
+                <video src="https://res.cloudinary.com/duhmeadz6/video/upload/v1731116359/space-bg_l1ktlq.mp4" className="min-h-screen min-w-full object-cover object-center" autoPlay muted loop>
                 </video>
             </div>
             <div className="flex flex-col items-center justify-center w-full py-10">
@@ -68,7 +68,7 @@ export default function Home() {
                                 <p className="font-semibold">{i.heading}</p>
                                 <p className="text-white-light">{i.subHeading}</p>
                             </div>
-                            <img src={`src/pages/images/${i.imgUrl}`} alt="" width={250} className="mx-auto pointer-events-none" />
+                            <img src={i.imgUrl} alt="" width={250} className="mx-auto pointer-events-none" />
                         </div>
                     ))
                 }
