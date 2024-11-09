@@ -63,7 +63,7 @@ export default function Header() {
     }, [showSideBar]);
     return (
         <>
-            <header className="sticky hidden min-h-14 top-0 z-50 bg-black shadow-white border-white border-opacity-20 border-b-[0.009px] lg:flex w-full items-center py-2 justify-between px-16">
+            <header className="absolute top-0 hidden min-h-14 z-50 bg-[#00000000] lg:flex w-full items-center py-2 justify-between px-16">
                 <div className="flex items-center gap-2">
                     <img src="src/components/images/logo.png" alt="" width={30} />
                     <span className="text-2xl font-bold">
@@ -79,7 +79,7 @@ export default function Header() {
                         </ul>
                     </nav>
                 </div>
-                <button className="bg-white text-black rounded-md text-sm py-1 px-2 font-normal">Transfer now</button>
+                <button className="bg-white text-black rounded-full text-sm py-2 px-3 font-normal">Transfer now</button>
             </header>
             <header className={`min-h-20 ${showSideBar && "bg-black"} absolute top-0 w-full flex items-center justify-between lg:hidden z-50`}>
                 <NavLink to={"/"} className={"flex items-center gap-1 mx-4"}>

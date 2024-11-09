@@ -39,8 +39,8 @@ export default function Home() {
     ]
     return (
         <>
-            <div className="lg:mt-2 flex justify-center md:items-center border-light border-t-0 border-l-0 border-r-0">
-                <div className="absolute lg:w-[70%] z-10 flex flex-col mt-32 lg:mt-0 items-center gap-4">
+            <div className="flex justify-center md:items-center border-light border-t-0 border-l-0 border-r-0">
+                <div className="absolute lg:w-[70%] z-10 flex flex-col mt-32 lg:mt-0 lg:mb-24 items-center gap-4">
                     <h1 className="font-bold text-6xl text-center">Share files anywhere easily!</h1>
                     <span className="text-white-light w-3/4 text-center text-lg">You can now share your files directly from your device to anywhere. It's safe, peer-to-peer and your data does'nt even gets stored on servers.</span>
                     <div className="flex gap-4 text-sm lg:text-xl mt-8">
@@ -48,14 +48,13 @@ export default function Home() {
                         <button className="relative pl-9 pr-4 py-2 bg-black border text-white rounded-full hover:bg-gray-900 transition hover:scale-110"><IoTriangleSharp className="absolute left-3 lg:top-[12px] rotate-180" size={"18px"} />Recieve a file</button>
                     </div>
                 </div>
-                <video src="src/pages/images/space-bg.mp4" style={{ height: `calc(100vh - 3.5rem)`, width: "100%" }} className="object-cover object-center" autoPlay muted loop>
+                <video src="src/pages/images/space-bg.mp4" className="min-h-screen min-w-full object-cover object-center" autoPlay muted loop>
                 </video>
             </div>
             <div className="flex flex-col items-center justify-center w-full py-10">
-                <div className="text-2xl lg:text-3xl font-medium flex gap-2 flex-wrap justify-center items-center">
+                <div className="text-2xl lg:text-3xl font-medium flex gap-2 flex-wrap justify-center items-center px-[1px]">
                     Share your <span className="flex items-center gap-2 text-white-light font-light border-light py-2 px-4 rounded-full text-lg"><SiFiles /> Files</span> without compromising <span className="flex items-center gap-2 text-md text-white-light font-light border-light py-2 px-4 rounded-full text-lg"><MdOutlineSecurity /> Security</span>
                 </div>
-                    <img src="src/pages/images/line.gif" alt="" className="w-[90%] mt-2 lg:w-auto"/>
             </div>
             <div className="lg:grid grid-cols-2 mx-auto lg:w-[80%]">
                 {
