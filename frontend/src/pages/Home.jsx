@@ -40,7 +40,7 @@ export default function Home() {
     return (
         <>
             <div className="flex justify-center md:items-center border-light border-t-0 border-l-0 border-r-0">
-                <div className="absolute lg:w-[70%] z-10 flex flex-col mt-32 lg:mt-0 lg:mb-24 items-center gap-4">
+                <div className="absolute lg:w-[70%] z-10 flex flex-col mt-32 lg:mt-0 lg:mb-12 items-center gap-4">
                     <h1 className="font-bold text-6xl text-center">Share files anywhere easily!</h1>
                     <span className="text-white-light w-3/4 text-center text-lg">You can now share your files directly from your device to anywhere. It's safe, peer-to-peer and your data does'nt even gets stored on servers.</span>
                     <div className="flex gap-4 text-sm lg:text-xl mt-8">
@@ -48,7 +48,7 @@ export default function Home() {
                         <button className="relative pl-9 pr-4 py-2 bg-black border text-white rounded-full hover:bg-gray-900 transition hover:scale-110"><IoTriangleSharp className="absolute left-3 lg:top-[12px] rotate-180" size={"18px"} />Recieve a file</button>
                     </div>
                 </div>
-                <video src="https://res.cloudinary.com/duhmeadz6/video/upload/v1731116359/space-bg_l1ktlq.mp4" className="min-h-screen min-w-full object-cover object-center" autoPlay muted loop>
+                <video src="https://res.cloudinary.com/duhmeadz6/video/upload/v1731116359/space-bg_l1ktlq.mp4" className="h-screen min-w-full object-cover object-center" autoPlay muted loop>
                 </video>
             </div>
             <div className="flex flex-col items-center justify-center w-full py-10">
