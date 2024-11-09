@@ -1,11 +1,14 @@
 @tailwind base;
 @tailwind components;
+
 .btn-white-black {
     @apply bg-white text-black
 }
+
 .text-white-light {
     @apply text-opacity-70 text-white
 }
+
 .border-light {
     @apply border border-white border-opacity-20
 }

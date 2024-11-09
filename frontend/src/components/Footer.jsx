@@ -34,7 +34,7 @@ export default function Footer() {
         },
     ]
     return (
-        <footer className="text-xl py-2 px-16 border-light border-b-0 border-l-0 border-r-0 mt-6 min-h-24 flex flex-col justify-center items-center gap-2">
+        <footer className="text-xl w-full py-2 px-16 border-light border-b-0 border-l-0 border-r-0 mt-6 min-h-24 flex flex-col justify-center items-center gap-2">
             <div className="flex gap-2 items-center flex-wrap justify-center">
                 <span className="text-white-light flex gap-2 items-center">
                     Handcrafted with <span className="text-white"><FaHeartCircleBolt /></span> by
@@ -49,7 +49,7 @@ export default function Footer() {
             <div className="flex gap-4 items-center mb-4 lg:mb-0">
                 {
                     links.map((i) => (
-                        <a href={i.href} target="_blank" className="text-2xl">{i.icon}</a>
+                        <a href={i.href} target="_blank" className="text-2xl" key={i.href}>{i.icon}</a>
                     ))
                 }
             </div>

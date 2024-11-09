@@ -8,7 +8,7 @@ export default function App() {
   return (
     <>
       <Header />
-      <main className="mt-4w-full">
+      <main className="w-full">
         <Outlet />
       </main>
       <Footer />

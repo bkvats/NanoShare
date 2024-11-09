@@ -75,13 +75,13 @@ export default function Header() {
                         <ul className="flex gap-8 mx-4 text-white-light font-light text-md items-center h-6">
                             {
                                 navLink.map((i) => (
-                                    <NavLink to={i.to} className={({ isActive }) => `${isActive && "border-b-2 pb-1"} hover:border-b-2 hover:pb-1`}>{i.name}</NavLink>
+                                    <NavLink key={i.to} to={i.to} className={({ isActive }) => `${isActive && "border-b-2 pb-1"} hover:border-b-2 hover:pb-1`}>{i.name}</NavLink>
                                 ))
                             }
                         </ul>
                     </nav>
                 </div>
-                <button className="bg-white text-black rounded-full text-sm py-2 px-3 font-normal">Transfer now</button>
+                <button className="bg-white text-black rounded-full text-sm py-2 px-3 font-normal hover:bg-opacity-90">Transfer now</button>
             </header>
             <header className={`min-h-20 ${showSideBar && "bg-black"} absolute top-0 w-full flex items-center justify-between lg:hidden z-50`}>
                 <NavLink to={"/"} className={"flex items-center gap-1 mx-4"}>
@@ -109,7 +109,7 @@ export default function Header() {
                         <ul className="flex flex-col gap-10 mx-4 mt-2 text-lg items-center">
                             {
                                 navLink.map((i) => (
-                                    <NavLink to={i.to} className={({ isActive }) => `${isActive && "border-b-2 pb-1"} hover:border-b-2 hover:pb-1`}>{i.name}</NavLink>
+                                    <NavLink key={i.to} to={i.to} className={({ isActive }) => `${isActive && "border-b-2 pb-1"} hover:border-b-2 hover:pb-1`}>{i.name}</NavLink>
                                 ))
                             }
                         </ul>
@@ -130,7 +130,7 @@ export default function Header() {
                         <div className="flex gap-4 items-center lg:mb-0">
                             {
                                 links.map((i) => (
-                                    <a href={i.href} target="_blank" className="text-2xl">{i.icon}</a>
+                                    <a href={i.href} target="_blank" className="text-2xl" key={i.href}>{i.icon}</a>
                                 ))
                             }
                         </div>

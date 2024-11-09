@@ -8,6 +8,9 @@ import Contact from './pages/Contact.jsx';
 import About from './pages/About.jsx';
 import FAQs from './pages/FAQs.jsx';
 import Privacy from './pages/Privacy.jsx';
+import Playground from './components/Playground.jsx';
+import Send from './pages/Send.jsx';
+import Receive from './pages/Receive.jsx';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -17,7 +20,11 @@ const router = createBrowserRouter(
       <Route path='/about' element={<About />} />
       <Route path='/privacy' element={<Privacy />} />
       <Route path='/faqs' element={<FAQs />} />
-    </Route>
+      <Route element={<Playground />} >
+        <Route path='/send' element={<Send />} />
+        <Route path='/receive' element={<Receive />} />
+      </Route>
+    </Route >
   )
 )
 createRoot(document.getElementById('root')).render(
