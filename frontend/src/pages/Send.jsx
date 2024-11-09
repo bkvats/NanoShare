@@ -94,10 +94,10 @@ export default function Send() {
                             <div key={index} className="max-w-24 px-2 max-h-36 overflow-hidden flex flex-col gap-2 my-4 relative">
                                 {
                                     <>
-                                        <button onClick={() => {
-                                            setFiles(prev => prev.filter((_, currIndex) => currIndex != index))
+                                        <button onClick={(event) => {
+                                            setFiles(prev => prev.filter((_, currIndex) => currIndex != index));
                                         }} >
-                                            <TfiClose color="red" className="absolute right-0 text-2xl z-10 hover:bg-[#ffffff2b] cursor-pointer rounded-full p-1" />
+                                            <TfiClose color="red" className="absolute right-0 text-2xl z-10 lg:hover:bg-[#ffffff2b] cursor-pointer rounded-full p-1" />
                                         </button>
                                         <span className="text-5xl self-center">{getFileIcon(file)}</span>
                                         <p className="text-base line-clamp-3 font-light text-center">{file.name}</p>
