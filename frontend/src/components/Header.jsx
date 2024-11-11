@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { IoMdCloseCircleOutline } from "react-icons/io";
 import { FaHeartCircleBolt } from "react-icons/fa6";
 import { FaXTwitter } from "react-icons/fa6";
@@ -11,6 +11,7 @@ import { IoIosOptions } from "react-icons/io";
 import { useEffect, useState } from "react";
 export default function Header() {
     const [showSideBar, setShowSideBar] = useState(false);
+    const location = useLocation();
     const navLink = [
         {
             name: "Contact",
@@ -63,7 +64,7 @@ export default function Header() {
     }, [showSideBar]);
     return (
         <>
-            <header className="absolute top-0 hidden min-h-14 z-50 bg-[#00000000] lg:flex w-full items-center py-2 justify-between px-16">
+            <header className={`${location.pathname === "/" ? "absolute bg-[#00000000]" : "sticky bg-black"} top-0 hidden min-h-20 z-50 lg:flex w-full items-center py-2 justify-between px-16`}>
                 <div className="flex items-center gap-2">
                     <NavLink to={"/"} className={"flex items-center gap-1 mx-4"}>
                         <img src="https://res.cloudinary.com/duhmeadz6/image/upload/v1731116089/logo_hdf34r.png" alt="" width={30} />
@@ -81,9 +82,9 @@ export default function Header() {
                         </ul>
                     </nav>
                 </div>
-                <button className="bg-white text-black rounded-full text-sm py-2 px-3 font-normal hover:bg-opacity-90">Transfer now</button>
+                <NavLink to={"/send"} className="bg-white text-black rounded-full text-sm py-2 px-3 font-normal hover:bg-opacity-90">Transfer now</NavLink>
             </header>
-            <header className={`min-h-20 ${showSideBar && "bg-black"} absolute top-0 w-full flex items-center justify-between lg:hidden z-50`}>
+            <header className={`${location.pathname === "/" ? "absolute bg-[#00000000]" : "sticky bg-black"} min-h-20 ${showSideBar && "bg-black"} top-0 w-full flex items-center justify-between lg:hidden z-50`}>
                 <NavLink to={"/"} className={"flex items-center gap-1 mx-4"}>
                     <img src="https://res.cloudinary.com/duhmeadz6/image/upload/v1731116089/logo_hdf34r.png" alt="" width={30} />
                     <span className="text-2xl font-bold">
@@ -113,7 +114,7 @@ export default function Header() {
                                 ))
                             }
                         </ul>
-                        <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10">Transfer now</button>
+                        <NavLink to={"/send"} className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10">Transfer now</NavLink>
                     </nav>
                     <div className="text-xl py-2 px-16 border-light border-b-0 border-l-0 border-r-0 flex flex-col justify-center items-center gap-2 mb-10">
                         <div className="flex gap-2 items-center flex-wrap justify-center">

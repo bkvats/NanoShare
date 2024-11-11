@@ -11,6 +11,7 @@ import Privacy from './pages/Privacy.jsx';
 import Playground from './components/Playground.jsx';
 import Send from './pages/Send.jsx';
 import Receive from './pages/Receive.jsx';
+import Test from "./components/Test.jsx";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -24,11 +25,10 @@ const router = createBrowserRouter(
         <Route path='/send' element={<Send />} />
         <Route path='/receive' element={<Receive />} />
       </Route>
+      <Route path='/test' element={<Test />} />
     </Route >
   )
 )
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <RouterProvider router={router} />
-  </StrictMode>,
+  <RouterProvider router={router} />
 )

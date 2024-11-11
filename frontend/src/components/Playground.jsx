@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 export default function Playground() {
     return (
-        <section className="pt-20">
+        <section className="mt-10">
             <div className="flex justify-center gap-4 text-2xl font-light px-2">
                 <NavLink to={"/send"} className={({ isActive }) => `w-full lg:w-1/3 ${isActive && "border-light border-t-0 font-medium"} p-2 text-center`}>
                     Send

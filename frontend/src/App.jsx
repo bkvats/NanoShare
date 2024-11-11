@@ -8,7 +8,7 @@ export default function App() {
   return (
     <>
       <Header />
-      <main className="w-full">
+      <main style={{minHeight: "calc(100vh - 11rem)", minWidth: "100%"}}>
         <Outlet />
       </main>
       <Footer />

@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { GoDotFill } from "react-icons/go";
 import { MdOutlineBackspace } from "react-icons/md";
 import { MdDoneAll } from "react-icons/md";
+import { HiArrowCircleRight } from "react-icons/hi";
+import { MdOutlineArrowCircleRight } from "react-icons/md";
+import { GoArrowRight } from "react-icons/go";
 export default function Receive() {
     const [code, setCode] = useState([-1, -1, -1, -1, -1, -1]);
-    const [currentIndex, setCurrentIndex] = useState(-1);
     return (
         <div>
-            <p className="text-center text-4xl font-light my-10">Enter PIN</p>
+            <p className="text-center text-4xl font-light my-10">Enter Access Key</p>
             <div className="w-full lg:w-1/2 flex justify-center gap-2 mx-auto">
                 {
                     code.map((i, index) => (
@@ -15,7 +17,7 @@ export default function Receive() {
                     ))
                 }
             </div>
-            <div className="mt-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6 lg:gap-8">
+            <div className="my-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6 lg:gap-8">
                 {
                     "123456789".split("").map((number) => (
                         <button key={number} className="w-fit text-center mx-4 lg:hover:bg-gray-900 px-4 py-2 rounded-full transition duration-300" onClick={() => {
@@ -56,9 +58,9 @@ export default function Receive() {
                     }
                     setCode(newArray);
                 }}>0</button>
-                <button className="w-fit text-center mx-4 hover:bg-gray-900 rounded-full p-2 transition duration-300" onClick={() => {
+                <button className="w-fit text-center mx-4 hover:bg-gray-900 hover:scale-125 rounded-full p-2 transition duration-300" onClick={() => {
                     console.log(code);
-                }}><MdDoneAll /></button>
+                }}><GoArrowRight /></button>
             </div>
         </div>
     );
