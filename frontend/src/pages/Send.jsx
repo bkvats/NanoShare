@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import io from "socket.io-client";
 import { TfiClose } from "react-icons/tfi";
 import { CiSquarePlus } from "react-icons/ci";
 import { CiImageOn } from "react-icons/ci";
@@ -27,12 +28,13 @@ import { MdContentCopy } from "react-icons/md";
 import { useDispatch } from "react-redux";
 import { setShowToast, setToastDetails} from "../store/toastSlice";
 
+const socket = io("http://localhost:3000");
 export default function Send() {
     const inputRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const [files, setFiles] = useState([]);
     const [step, setStep] = useState(1);
-    const [accessCode, setAccessCode] = useState("854720");
+    const [accessCode, setAccessCode] = useState("");
     const [showAccessCode, setShowAccessCode] = useState(false);
     const dispatch = useDispatch();
     const fileIcons = new Map([
@@ -133,7 +135,19 @@ export default function Send() {
                         }}
                         hidden />
                     <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition" onClick={() => {
-                        if (files.length > 0) setStep(prev => prev + 1);
+                        if (files.length > 0) {
+                            const code = `${Math.floor(100000 + Math.random() * 900000)}`;
+                            console.log(code);
+                            socket.emit("register-code", code, (response) => {
+                                if (response.success) {
+                                    setAccessCode(code);
+                                    setStep(prev => prev + 1);
+                                }
+                                else {
+                                    dispatch(setToastDetails({message: "Something went wrong please try again !", type: "error"}));
+                                }
+                            })
+                        }
                         else {
                             dispatch(setToastDetails({type: "warning", message: "Kindly select file/s first!"}));
                             dispatch(setShowToast(true));
@@ -155,7 +169,9 @@ export default function Send() {
                                 </button>
                                 <button onClick={() => {
                                     navigator.clipboard.writeText(accessCode);
-                                }} className="hover:bg-gray-700 p-3 rounded-full"><MdContentCopy /></button>
+                                    dispatch(setToastDetails({message: "Copied Successfully !"}));
+                                    dispatch(setShowToast(true));
+                                }} className="hover:bg-white hover:bg-opacity-30 p-3 rounded-full"><MdContentCopy /></button>
                             </div>
                         </div>
                         <p className="px-2 text-center font-light text-xl lg:text-2xl text-white-light"><span className="underline">Note</span>: Do not close this page if you do, you will not be able to share file/s anymore.</p>
