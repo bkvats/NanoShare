@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Home from "./pages/Home";
 import Footer from "./components/Footer";
 import { Outlet } from "react-router-dom";
+import Toast from "./components/Toast";
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
         <Outlet />
       </main>
       <Footer />
+      <Toast />
     </>
   )
 }

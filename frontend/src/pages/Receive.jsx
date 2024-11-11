@@ -5,8 +5,11 @@ import { MdDoneAll } from "react-icons/md";
 import { HiArrowCircleRight } from "react-icons/hi";
 import { MdOutlineArrowCircleRight } from "react-icons/md";
 import { GoArrowRight } from "react-icons/go";
+import { useDispatch } from "react-redux";
+import { setShowToast, setToastDetails } from "../store/toastSlice";
 export default function Receive() {
     const [code, setCode] = useState([-1, -1, -1, -1, -1, -1]);
+    const dispatch = useDispatch();
     return (
         <div>
             <p className="text-center text-4xl font-light my-10">Enter Access Key</p>
@@ -59,7 +62,13 @@ export default function Receive() {
                     setCode(newArray);
                 }}>0</button>
                 <button className="w-fit text-center mx-4 hover:bg-gray-900 hover:scale-125 rounded-full p-2 transition duration-300" onClick={() => {
-                    console.log(code);
+                    if (code.includes(-1)) {
+                        dispatch(setToastDetails({message: "Enter access code first!", type: "error"}));
+                        dispatch(setShowToast(true));
+                        return;
+                    }
+                    dispatch(setToastDetails());
+                    dispatch(setShowToast(true));
                 }}><GoArrowRight /></button>
             </div>
         </div>

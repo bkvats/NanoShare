@@ -24,6 +24,8 @@ import { LuFileJson2 } from "react-icons/lu";
 import { FaEye, } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import { MdContentCopy } from "react-icons/md";
+import { useDispatch } from "react-redux";
+import { setShowToast, setToastDetails} from "../store/toastSlice";
 
 export default function Send() {
     const inputRef = useRef(null);
@@ -32,6 +34,7 @@ export default function Send() {
     const [step, setStep] = useState(1);
     const [accessCode, setAccessCode] = useState("854720");
     const [showAccessCode, setShowAccessCode] = useState(false);
+    const dispatch = useDispatch();
     const fileIcons = new Map([
         ["image", <CiImageOn />],
         ["video", <LuClapperboard />],
@@ -129,7 +132,13 @@ export default function Send() {
                             setFiles([...files, ...Array.from(event.target.files)]);
                         }}
                         hidden />
-                    <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition" onClick={() => {setStep(prev => prev + 1)}}>Send</button>
+                    <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition" onClick={() => {
+                        if (files.length > 0) setStep(prev => prev + 1);
+                        else {
+                            dispatch(setToastDetails({type: "warning", message: "Kindly select file/s first!"}));
+                            dispatch(setShowToast(true));
+                        }
+                    }}>Send</button>
                 </div>
             }
             {
