@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
+import io from "socket.io-client";
 import { Outlet } from "react-router-dom";
 import { NavLink } from "react-router-dom";
+
 export default function Playground() {
     return (
         <section className="mt-10">
@@ -13,7 +15,6 @@ export default function Playground() {
                 </NavLink>
             </div>
             <div className="mt-8 relative">
-                {/* <video src="https://hrcdn.net/fcore/assets/onboarding/globe-5fdfa9a0f4.mp4" autoPlay={false} loop muted className="w-full h-[600px]"></video> */}
                 <div className="z-10 w-full">
                     <Outlet />
                 </div>

@@ -1,5 +1,4 @@
-import React, { useRef, useState } from "react";
-import io from "socket.io-client";
+import React, { useRef, useState, useEffect } from "react";
 import { TfiClose } from "react-icons/tfi";
 import { CiSquarePlus } from "react-icons/ci";
 import { CiImageOn } from "react-icons/ci";
@@ -26,9 +25,12 @@ import { FaEye, } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
 import { MdContentCopy } from "react-icons/md";
 import { useDispatch } from "react-redux";
-import { setShowToast, setToastDetails} from "../store/toastSlice";
+import { displayToast } from "../store/toastSlice";
+import getSocket from "../socket";
 
-const socket = io("http://localhost:3000");
+
+const socket = getSocket();
+
 export default function Send() {
     const inputRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -64,6 +66,11 @@ export default function Send() {
         if (fileIcons.has(file.name.split(".").at(-1))) return fileIcons.get(file.name.split(".").at(-1));
         return fileIcons.get("other");
     }
+    useEffect(() => {
+        socket.on("connect", () => {
+            console.log("socket connected in send page", socket.id);
+        })
+    });
     return (
         <>
             {
@@ -136,21 +143,42 @@ export default function Send() {
                         hidden />
                     <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition" onClick={() => {
                         if (files.length > 0) {
-                            const code = `${Math.floor(100000 + Math.random() * 900000)}`;
-                            console.log(code);
-                            socket.emit("register-code", code, (response) => {
-                                if (response.success) {
-                                    setAccessCode(code);
-                                    setStep(prev => prev + 1);
-                                }
-                                else {
-                                    dispatch(setToastDetails({message: "Something went wrong please try again !", type: "error"}));
-                                }
-                            })
+                            try {
+                                socket.emit("get-code", async (response) => {
+                                    if (response.success) {
+                                        setAccessCode(response.data.code);
+                                        // const pc = new RTCPeerConnection({
+                                        //     iceServers: [
+                                        //         {
+                                        //             urls: "stun:stun.l.google.com:19302"
+                                        //         }
+                                        //     ]
+                                        // });
+                                        // pc.onicecandidate = (event) => {
+                                        //     if (event.candidate) socket.emit("ice-canditate", event.candidate);
+                                        // }
+                                        // const offer = await pc.createOffer();
+                                        // await pc.setLocalDescription(offer);
+                                        // console.log(pc.localDescription);
+                                        // socket.emit("sdp-offer", pc.localDescription);
+                                        setStep(prev => prev + 1);
+                                    }
+                                    else {
+                                        dispatch(displayToast({ message: "Something went wrong please try again !", type: "error" }));
+                                    }
+                                    return;
+                                });
+                                socket.on("getReceiverSocketId", (recevierSocketId) => {
+                                    console.log("Succesfully got receiver Id:", recevierSocketId);
+                                });
+                            }
+                            catch (error) {
+                                dispatch(displayToast({ message: "Something went wrong please try again !", type: "error" }));
+                                console.log("error is here", error);
+                            }
                         }
                         else {
-                            dispatch(setToastDetails({type: "warning", message: "Kindly select file/s first!"}));
-                            dispatch(setShowToast(true));
+                            dispatch(displayToast({ type: "warning", message: "Kindly select file/s first!" }));
                         }
                     }}>Send</button>
                 </div>
@@ -169,8 +197,7 @@ export default function Send() {
                                 </button>
                                 <button onClick={() => {
                                     navigator.clipboard.writeText(accessCode);
-                                    dispatch(setToastDetails({message: "Copied Successfully !"}));
-                                    dispatch(setShowToast(true));
+                                    dispatch(displayToast({ message: "Copied Successfully !" }));
                                 }} className="hover:bg-white hover:bg-opacity-30 p-3 rounded-full"><MdContentCopy /></button>
                             </div>
                         </div>

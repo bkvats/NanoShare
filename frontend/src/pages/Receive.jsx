@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import io from "socket.io-client";
 import { GoDotFill } from "react-icons/go";
 import { MdOutlineBackspace } from "react-icons/md";
-import { MdDoneAll } from "react-icons/md";
-import { HiArrowCircleRight } from "react-icons/hi";
-import { MdOutlineArrowCircleRight } from "react-icons/md";
 import { GoArrowRight } from "react-icons/go";
 import { useDispatch } from "react-redux";
-import { setShowToast, setToastDetails } from "../store/toastSlice";
+import { displayToast } from "../store/toastSlice";
+import getSocket from "../socket";
+
+const socket = getSocket();
+
 export default function Receive() {
     const [code, setCode] = useState([-1, -1, -1, -1, -1, -1]);
     const dispatch = useDispatch();
@@ -63,12 +65,34 @@ export default function Receive() {
                 }}>0</button>
                 <button className="w-fit text-center mx-4 hover:bg-gray-900 hover:scale-125 rounded-full p-2 transition duration-300" onClick={() => {
                     if (code.includes(-1)) {
-                        dispatch(setToastDetails({message: "Enter access code first!", type: "error"}));
-                        dispatch(setShowToast(true));
+                        dispatch(displayToast({ message: "Enter access code first!", type: "error" }));
                         return;
                     }
-                    dispatch(setToastDetails());
-                    dispatch(setShowToast(true));
+                    socket.emit("check-code", code.join(""), (response) => {
+                        if (response.success) {
+                            // dispatch(displayToast());
+                            socket.emit("getReceiverSocketId", {senderSocketId: response.data.socketId, receiverSocketId: socket.id});
+                            // const pc = new RTCPeerConnection({
+                            //     iceServers: [
+                            //         { urls: "stun:stun.l.google.com:19302" }
+                            //     ]
+                            // });
+                            // socket.on("sdp-offer", async (offer) => {
+                            //     console.log("SDP offer received:", offer);
+                            //     await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                            //     const answer = await pc.createAnswer();
+                            //     await pc.setLocalDescription(answer);
+                            //     socket.emit("sdp-answer", pc.localDescription);
+                            //     console.log("succesfully added sdp offer")
+                            // });
+                            // socket.on("ice-canditate", async (canditate) => {
+                            //     console.log("ICE Canditate Received:", candidate);
+                            //     await pc.addIceCandidate(new RTCIceCandidate(canditate));
+                            //     console.log("succesfully added ice candidate");
+                            // })
+                        }
+                        else if (response.statusCode == 404) dispatch(displayToast({ message: "Invalid Access Code !", type: "error" }));
+                    });
                 }}><GoArrowRight /></button>
             </div>
         </div>
