@@ -39,6 +39,7 @@ export default function Send() {
     const [accessCode, setAccessCode] = useState("");
     const [showAccessCode, setShowAccessCode] = useState(false);
     const dispatch = useDispatch();
+    // let receiverSocketId = null;
     const fileIcons = new Map([
         ["image", <CiImageOn />],
         ["video", <LuClapperboard />],
@@ -61,16 +62,86 @@ export default function Send() {
         ["json", <LuFileJson2 />],
         ["other", <CiFileOn />]
     ]);
+
     function getFileIcon(file) {
         if (fileIcons.has(file.type.split("/")[0])) return fileIcons.get(file.type.split("/")[0]);
         if (fileIcons.has(file.name.split(".").at(-1))) return fileIcons.get(file.name.split(".").at(-1));
         return fileIcons.get("other");
     }
+
     useEffect(() => {
         socket.on("connect", () => {
             console.log("socket connected in send page", socket.id);
-        })
-    });
+        });
+
+        // if (step == 2) {
+        //     const pc = new RTCPeerConnection({
+        //         iceServers: [
+        //             { urls: "stun:stun.l.google.com:19302" },
+        //         ],
+        //         iceTransportPolicy: 'all' // Ensure this is not too restrictive
+        //     });
+
+
+        //     socket.on("getReceiverSocketId", async (receiverId) => {
+        //         receiverSocketId = receiverId;
+        //         const dataChannel = pc.createDataChannel("fileTransfer");
+        //         dataChannel.onopen = () => {
+        //             console.log("Data channel is open and ready to send files");
+        // const chunkSize = 16 * 1024;
+        // let offset = 0;
+        // const reader = new FileReader();
+        // reader.onload((event) => {
+        //     if (event.target.readyState == FileReader.DONE) {
+        //         dataChannel.send(event.target.result);
+        //         offset += chunkSize;
+        //         if (offset < files[0].size) {
+        //             console.log("file is still not completly send");
+        //             readSlice(offset);
+        //         }
+        //         else console.log("file sent successfully");
+        //     }
+        // });
+        // readSlice(0);
+        // const readSlice = (offset) => {
+        //     const slice = files[0].slice(offset, chunkSize + offset);
+        //     reader.readAsArrayBuffer(slice);
+        // }
+        //         }
+        //         dataChannel.onclose = () => {
+        //             console.log("Data channel is closed on sender side");
+        //         }
+        //         const offer = await pc.createOffer();
+        //         await pc.setLocalDescription(offer);
+        //         socket.emit("sdp-offer", {
+        //             offer: pc.localDescription,
+        //             receiverSocketId
+        //         });
+        //     });
+
+        //     pc.onicecandidate = (event) => {
+        //         if (event.candidate) socket.emit("ice-canditate", {
+        //             candidate: event.candidate,
+        //             anotherEndSocketId: receiverSocketId
+        //         }
+        //         );
+        //     }
+
+        //     socket.on("sdp-answer", async (answer) => {
+        //         pc.setRemoteDescription(new RTCSessionDescription(answer));
+        //     });
+
+        //     socket.on("ice-candidate", async (candidate) => {
+        //         if (pc.remoteDescription && pc.remoteDescription.type) {
+        //             // Add the ICE candidate if the remote description is already set
+        //             await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        //         } else {
+        //             // Otherwise, store the candidate and add it later
+        //             console.log('ICE candidate received before setting remote description');
+        //         }
+        //     });
+        // }
+    }, [step]);
     return (
         <>
             {
@@ -144,23 +215,10 @@ export default function Send() {
                     <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition" onClick={() => {
                         if (files.length > 0) {
                             try {
+                                let receiverSocketId = "";
                                 socket.emit("get-code", async (response) => {
                                     if (response.success) {
                                         setAccessCode(response.data.code);
-                                        // const pc = new RTCPeerConnection({
-                                        //     iceServers: [
-                                        //         {
-                                        //             urls: "stun:stun.l.google.com:19302"
-                                        //         }
-                                        //     ]
-                                        // });
-                                        // pc.onicecandidate = (event) => {
-                                        //     if (event.candidate) socket.emit("ice-canditate", event.candidate);
-                                        // }
-                                        // const offer = await pc.createOffer();
-                                        // await pc.setLocalDescription(offer);
-                                        // console.log(pc.localDescription);
-                                        // socket.emit("sdp-offer", pc.localDescription);
                                         setStep(prev => prev + 1);
                                     }
                                     else {
@@ -168,9 +226,88 @@ export default function Send() {
                                     }
                                     return;
                                 });
-                                socket.on("getReceiverSocketId", (recevierSocketId) => {
-                                    console.log("Succesfully got receiver Id:", recevierSocketId);
+
+                                const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+
+                                const dataChannel = pc.createDataChannel("fileTransfer");
+                                dataChannel.onopen = () => {
+                                    console.log("Data channel is open to send files");
+                                    // const readSlice = (offset) => {
+                                    //     const slice = files[0].slice(offset, chunkSize + offset);
+                                    //     // console.log("in read file slice:", slice);
+                                    //     reader.readAsArrayBuffer(slice);
+                                    // }
+                                    dataChannel.send(JSON.stringify({type: "fileType", fileType: files[0].type}));
+                                    // dataChannel.send(files[0]);
+                                    // dataChannel.send("EOF");
+                                    // console.log("file sent successfully");
+                                    const chunkSize = 8 * 1024;
+                                    let offset = 0;
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                        if (event.target.readyState == FileReader.DONE) {
+                                            const chunk = event.target.readyState;
+                                            dataChannel.send(event.target.result);
+                                            offset += chunkSize;
+                                            if (offset < files[0].size) {
+                                                console.log("file is still not completly send");
+                                                readSlice(offset);
+                                            }
+                                            else {
+                                                dataChannel.send("EOF");
+                                                console.log("file sent successfully");
+                                            }
+
+                                        }
+                                    };
+                                    // reader.readAsArrayBuffer(files[0]);
+                                    // readSlice(0);
+                                }
+                                dataChannel.onclose = () => {
+                                    console.log("Data channel is no more sending files");
+                                }
+
+                                socket.on("getReceiverSocketId", async (receiverId) => {
+                                    receiverSocketId = receiverId;
+                                    const offer = await pc.createOffer();
+                                    await pc.setLocalDescription(offer);
+                                    socket.emit("sdp-offer", {
+                                        offer: pc.localDescription,
+                                        receiverSocketId
+                                    });
                                 });
+
+                                socket.on("sdp-answer", async (answer) => {
+                                    console.log("got sdp answer from receiver:", answer);
+                                    pc.setRemoteDescription(new RTCSessionDescription(answer));
+                                })
+
+                                pc.onicecandidate = (event) => {
+                                    if (event.candidate) {
+                                        socket.emit("ice-candidate", {
+                                            candidate: event.candidate,
+                                            anotherEndSocketId: receiverSocketId
+                                        })
+                                    }
+                                }
+
+                                socket.on("ice-candidate", async (candidate) => {
+                                    if (pc.remoteDescription && pc.remoteDescription.type) {
+                                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                                    }
+                                    else {
+                                        console.log("ICE candidate received before setting remote description");
+                                    }
+                                });
+
+
+                                // pc.onicegatheringstatechange = () => {
+                                //     console.log('ICE gathering state on sender page:', pc.iceGatheringState);
+                                // };
+
+
+
+
                             }
                             catch (error) {
                                 dispatch(displayToast({ message: "Something went wrong please try again !", type: "error" }));

@@ -33,9 +33,23 @@ export default function setupSocketIO(server) {
 
         socket.on("getReceiverSocketId", (ids) => {
             console.log("ids received from receiver:", ids);
-            io.to(ids.senderSockedId).emit("getReceiverSocketId", ids.receiverSocketId);
+            io.to(ids.senderSocketId).emit("getReceiverSocketId", ids.receiverSocketId);
         });
         
+        socket.on("sdp-offer", (data) => {
+            console.log("getting sdp offer on server:", data);
+            io.to(data.receiverSocketId).emit("sdp-offer", data.offer);
+        });
+        
+        socket.on("sdp-answer", (data) => {
+            console.log("getting sdp answer on server:", data);
+            io.to(data.senderSocketId).emit("sdp-answer", data.answer);
+        })
+        socket.on("ice-candidate", (data) => {
+            console.log("seding ice-candidate to:", data.anotherEndSocketId);
+            io.to(data.anotherEndSocketId).emit("ice-candidate", data.candidate);
+        });
+
         socket.on("disconnect", async () => {
             console.log("a user is disconnected:", socket.id);
             await AccessCode.findOneAndDelete({ socketId: socket.id });

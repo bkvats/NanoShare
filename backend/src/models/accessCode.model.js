@@ -11,6 +11,6 @@ const accessCodeSchema = new mongoose.Schema({
         required: true,
         unique: true
     }
-});
+}, {timestamps: true});
 
 export const AccessCode = mongoose.model("AccessCode", accessCodeSchema);
