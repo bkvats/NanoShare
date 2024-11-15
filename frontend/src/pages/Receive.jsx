@@ -12,71 +12,7 @@ const socket = getSocket();
 export default function Receive() {
     const [code, setCode] = useState([-1, -1, -1, -1, -1, -1]);
     const [step, setStep] = useState(1);
-    // const [senderSocketId, setSenderSocketId] = useState(null);
     const dispatch = useDispatch();
-
-    // useEffect(() => {
-    //     console.log("in receiver useEffect");
-    //     // if (step == 1) return;
-    //     // console.log("after if condition");
-    //     const pc = new RTCPeerConnection({
-    //         iceServers: [
-    //             { urls: "stun:stun.l.google.com:19302" }
-    //         ],
-    //         iceTransportPolicy: 'all' // Ensure this is not too restrictive
-    //     });
-
-
-    //     pc.onicecandidate = (event) => {
-    //         if (event.candidate) {
-    //             socket.emit("ice-candidate", {
-    //                 candidate: event.candidate,
-    //                 anotherEndSocketId: senderSocketId
-    //             })
-    //         }
-    //     }
-
-    //     socket.on("sdp-offer", async (offer) => {
-    //         let chunks = [];
-    //         pc.ondatachannel = (event) => {
-    //             const dataChannel = event.channel;
-    //             dataChannel.onopen = () => {
-    //                 console.log("Data channel is opened on reciever side");
-    //             }
-    //             dataChannel.onclose = () => {
-    //                 console.log("Data channel is closed on receiver side");
-    // const receivedBlob = new Blob(chunks);
-    // const downloadUrl = URL.createObjectURL(receivedBlob);
-
-    // // Create a download link
-    // const link = document.createElement("a");
-    // link.href = downloadUrl;
-    // link.download = "received_file"; // You can set the file name
-    // document.body.appendChild(link);
-    // link.click();
-    // document.body.removeChild(link);
-
-    // console.log("File received and ready for download");
-    //             }
-    //             // dataChannel.onmessage((event) => {
-    //             //     chunks.push(event.data);
-    //             //     console.log("received chunk of size:", event.data.byteLength);
-    //             // })
-    //         }
-    //         await pc.setRemoteDescription(new RTCSessionDescription(offer));
-    //         const answer = await pc.createAnswer();
-    //         await pc.setLocalDescription(answer);
-    //         socket.emit("sdp-answer", {
-    //             answer: pc.localDescription,
-    //             senderSocketId
-    //         });
-    //     });
-
-    //     socket.on("ice-candidate", async (candidate) => {
-    //         await pc.addIceCandidate(new RTCIceCandidate(candidate));
-    //     });
-
-    // }, [])
     return (
         <div>
             <p className="text-center text-4xl font-light my-10">Enter Access Key</p>
@@ -141,7 +77,7 @@ export default function Receive() {
                             if (response.success) {
                                 // dispatch(displayToast());
                                 senderSocketId = response.data.socketId;
-                                socket.emit("getReceiverSocketId", { senderSocketId, receiverSocketId: socket.id });
+                                socket.emit("setupNewConnection", { senderSocketId, receiverSocketId: socket.id });
                                 setStep(prev => prev + 1);
                             }
                             else if (response.statusCode == 404) dispatch(displayToast({ message: "Invalid Access Code !", type: "error" }));
@@ -152,36 +88,36 @@ export default function Receive() {
                         pc.ondatachannel = (event) => {
                             let chunks = [];
                             let fileType = "";
+                            let fileName = "";
                             const dataChannel = event.channel;
                             dataChannel.onopen = () => {
                                 console.log("Data channel is open to receive files");
                             }
                             dataChannel.onclose = () => {
                                 console.log("Data Channel is close on receiver side");
-
-
                             }
                             dataChannel.onmessage = (event) => {
                                 if (typeof event.data === "string") {
-                                    if (event.data.includes("fileType")) {
-                                        const metaData = JSON.parse(event.data);
-                                        fileType = metaData.fileType;
-                                        console.log("receiving file of type:", fileType);
+                                    const data = JSON.parse(event.data);
+                                    if (data.type === "fileInfo") {
+                                        fileType = data.fileType;
+                                        fileName = data.fileName;
+                                        console.log("Receving file of type:", fileType, "\nName:", fileName);
                                     }
-                                    else if (event.data === "EOF") {
-                                        console.log("End of file");
-                                        const receivedBlob = new Blob(chunks, {type: fileType});
-                                        const downloadUrl = URL.createObjectURL(receivedBlob);
-    
-                                        // Create a download link
-                                        const link = document.createElement("a");
-                                        link.href = downloadUrl;
-                                        link.download = "received_file"; // You can set the file name
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-    
-                                        console.log("File received and ready for download");
+                                    if (data.type === "response") {
+                                        if (data.EOF) {
+                                            console.log("file received succesfully....");
+                                            const blob = new Blob(chunks, {type: fileType});
+                                            const downloadUrl = URL.createObjectURL(blob);
+                                            const link = document.createElement("a");
+                                            link.href = downloadUrl;
+                                            link.hidden = true;
+                                            link.download = `NanoShare_${fileName}`
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            chunks = [];
+                                        }
                                     }
                                 }
                                 else {
@@ -198,7 +134,8 @@ export default function Receive() {
                             await pc.setLocalDescription(answer);
                             socket.emit("sdp-answer", {
                                 answer: pc.localDescription,
-                                senderSocketId
+                                senderSocketId,
+                                receiverSocketId: socket.id
                             });
                         });
 
@@ -206,20 +143,15 @@ export default function Receive() {
                             if (event.candidate) {
                                 socket.emit("ice-candidate", {
                                     candidate: event.candidate,
-                                    anotherEndSocketId: senderSocketId
+                                    anotherEndSocketId: senderSocketId,
+                                    receiverSocketId: socket.id
                                 });
                             }
                         }
 
-                        socket.on("ice-candidate", async (candidate) => {
+                        socket.on("ice-candidate", async ({candidate}) => {
                             await pc.addIceCandidate(new RTCIceCandidate(candidate));
                         });
-                        // pc.onicegatheringstatechange = () => {
-                        //     console.log('ICE gathering state on sender page:', pc.iceGatheringState);
-                        // };
-
-
-
                     }
                     catch (error) {
                         dispatch(displayToast({ message: "Something went wrong, Please try again!", type: "error" }));
