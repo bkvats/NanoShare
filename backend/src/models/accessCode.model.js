@@ -10,6 +10,15 @@ const accessCodeSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true
+    },
+    receivers: {
+        type: [
+            {
+                type: String,
+                required: true,
+                unique: true
+            }
+        ]
     }
 }, {timestamps: true});
 

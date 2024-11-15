@@ -18,8 +18,8 @@ export default function setupSocketIO(server) {
                 do {
                     code = `${Math.floor(100000 + Math.random() * 900000)}`;
                 } while (await !AccessCode.findOne({ accessCode: code }));
-                await AccessCode.create({ accessCode: code, socketId: socket.id });
-                if (callback) callback(apiResponse(200, "Access code mapped successfully", { code }));
+                await AccessCode.create({ accessCode: code, socketId: socket.id, receivers: [] });
+                callback(apiResponse(200, "Access code mapped successfully", { code }));
             })();
         });
 
@@ -31,9 +31,9 @@ export default function setupSocketIO(server) {
             })();
         });
 
-        socket.on("getReceiverSocketId", (ids) => {
+        socket.on("setupNewConnection", (ids) => {
             console.log("ids received from receiver:", ids);
-            io.to(ids.senderSocketId).emit("getReceiverSocketId", ids.receiverSocketId);
+            io.to(ids.senderSocketId).emit("setupNewConnection", ids.receiverSocketId);
         });
         
         socket.on("sdp-offer", (data) => {
@@ -43,11 +43,12 @@ export default function setupSocketIO(server) {
         
         socket.on("sdp-answer", (data) => {
             console.log("getting sdp answer on server:", data);
-            io.to(data.senderSocketId).emit("sdp-answer", data.answer);
-        })
-        socket.on("ice-candidate", (data) => {
-            console.log("seding ice-candidate to:", data.anotherEndSocketId);
-            io.to(data.anotherEndSocketId).emit("ice-candidate", data.candidate);
+            io.to(data.senderSocketId).emit("sdp-answer", {answer: data.answer, receiverSocketId: data.receiverSocketId});
+        });
+
+        socket.on("ice-candidate", ({candidate, anotherEndSocketId, receiverSocketId}) => {
+            console.log("sending ice-candidate to:", anotherEndSocketId);
+            io.to(anotherEndSocketId).emit("ice-candidate", {candidate, receiverSocketId});
         });
 
         socket.on("disconnect", async () => {
