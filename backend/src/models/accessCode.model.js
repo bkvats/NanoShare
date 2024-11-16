@@ -11,14 +11,10 @@ const accessCodeSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    receivers: {
-        type: [
-            {
-                type: String,
-                required: true,
-                unique: true
-            }
-        ]
+    isSending: {
+        type: Boolean,
+        required: true,
+        default: true
     }
 }, {timestamps: true});
 
