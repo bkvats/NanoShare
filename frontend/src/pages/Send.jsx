@@ -28,6 +28,7 @@ import { useDispatch } from "react-redux";
 import { displayToast } from "../store/toastSlice";
 import getSocket from "../socket";
 import ToggleButton from "../components/ToggleButton";
+import { displayLoader, setIsLoading } from "../store/loaderSlice";
 
 
 const socket = getSocket();
@@ -151,11 +152,13 @@ export default function Send() {
                     </span>
                     <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition" onClick={() => {
                         if (files.length > 0) {
+                            dispatch(displayLoader());
                             try {
                                 const peerConnections = new Map();
-                                socket.emit("get-code", async (response) => {
+                                socket.emit("get-code", allowMultipleReceivers, async (response) => {
                                     if (response.success) {
                                         setAccessCode(response.data.code);
+                                        dispatch(setIsLoading(false));
                                         setStep(prev => prev + 1);
                                     }
                                     else {
@@ -163,20 +166,18 @@ export default function Send() {
                                     }
                                     return;
                                 });
+
                                 socket.on("setupNewConnection", async (receiverSocketId) => {
-                                    if (!allowMultipleReceivers) {
-                                        console.log("connected connections:", peerConnections.size);
-                                        if (peerConnections.size == 1) {
-                                            console.log("Multiple users are not allowed to connect...");
-                                            return;
-                                        }
-                                    }
                                     console.log(receiverSocketId, "trying to setup a new connection..");
                                     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
                                     peerConnections.set(receiverSocketId, pc);
                                     const dataChannel = pc.createDataChannel("fileTransfer");
                                     dataChannel.onopen = () => {
                                         console.log("Data channel is open to send files");
+                                        if (!allowMultipleReceivers && peerConnections.size == 1) {
+                                            console.log("sending block request to server");
+                                            socket.emit("change-permission", {senderSocketId: socket.id, isSending: false});
+                                        }
                                         function sendFile(file) {
                                             function sendNextChunk() {
                                                 if (offset < file.size) {

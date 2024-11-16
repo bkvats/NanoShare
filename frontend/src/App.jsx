@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Footer from "./components/Footer";
 import { Outlet } from "react-router-dom";
 import Toast from "./components/Toast";
+import Loader from "./components/Loader";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
       </main>
       <Footer />
       <Toast />
+      <Loader />
     </>
   )
 }

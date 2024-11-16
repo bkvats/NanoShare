@@ -6,6 +6,7 @@ import { GoArrowRight } from "react-icons/go";
 import { useDispatch } from "react-redux";
 import { displayToast } from "../store/toastSlice";
 import getSocket from "../socket";
+import { displayLoader, setIsLoading } from "../store/loaderSlice";
 
 const socket = getSocket();
 
@@ -70,16 +71,16 @@ export default function Receive() {
                         return;
                     }
                     try {
-
+                        dispatch(displayLoader("Verifying Code..."));
                         let senderSocketId = "";
-                        // console.log(pc);
                         socket.emit("check-code", code.join(""), (response) => {
+                            dispatch(setIsLoading(false));
                             if (response.success) {
-                                // dispatch(displayToast());
                                 senderSocketId = response.data.socketId;
                                 socket.emit("setupNewConnection", { senderSocketId, receiverSocketId: socket.id });
                                 setStep(prev => prev + 1);
                             }
+                            else if (response.statusCode == 400) dispatch(displayToast({message: response.message, type: "warning"}));
                             else if (response.statusCode == 404) dispatch(displayToast({ message: "Invalid Access Code !", type: "error" }));
                         });
 

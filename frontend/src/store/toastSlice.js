@@ -18,11 +18,6 @@ export const toastSlice = createSlice({
             state.duration = action.payload?.duration || 3000;
             state.showToast = true;
         }
-        // setToastDetails: (state, action) => {
-        //     state.type = action.payload?.type || "success";
-        //     state.message = action.payload?.message || "Success";
-        //     state.duration = action.payload?.duration || 3000;
-        // }
     }
 });
 export const {setShowToast, displayToast} = toastSlice.actions;
