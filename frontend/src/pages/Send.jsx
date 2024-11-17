@@ -136,6 +136,8 @@ export default function Send() {
                             dispatch(displayLoader());
                             try {
                                 const peerConnections = new Map();
+                                const iceCandidates = new Map();
+                                const remoteDescriptionSet = new Map();
                                 socket.emit("get-code", allowMultipleReceivers, async (response) => {
                                     if (response.success) {
                                         setAccessCode(response.data.code);
@@ -152,6 +154,8 @@ export default function Send() {
                                     console.log(receiverSocketId, "trying to setup a new connection..");
                                     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
                                     peerConnections.set(receiverSocketId, pc);
+                                    iceCandidates.set(receiverSocketId, []);
+                                    remoteDescriptionSet.set(receiverSocketId, false);
                                     const dataChannel = pc.createDataChannel("fileTransfer");
                                     dataChannel.onopen = () => {
                                         console.log("Data channel is open to send files");
@@ -186,7 +190,7 @@ export default function Send() {
                                                 dataChannel.send(event.target.result);
                                                 sendNextChunk();
                                             }
-                                            const chunkSize = 16 * 1024;
+                                            const chunkSize = 32 * 1024;
                                             let offset = 0;
                                             dataChannel.send(JSON.stringify({ type: "fileInfo", fileType: file.type, fileName: file.name }));
                                             videoRef.current.play();
@@ -226,15 +230,21 @@ export default function Send() {
 
                                 socket.on("sdp-answer", async ({ answer, receiverSocketId }) => {
                                     console.log("got sdp answer from receiver:", answer);
-                                    peerConnections.get(receiverSocketId).setRemoteDescription(new RTCSessionDescription(answer));
+                                    await peerConnections.get(receiverSocketId).setRemoteDescription(new RTCSessionDescription(answer));
+                                    remoteDescriptionSet.set(receiverSocketId, true);
+                                    iceCandidates.get(receiverSocketId).map((candidate) => {
+                                        peerConnections.get(receiverSocketId).addIceCandidate(new RTCIceCandidate(candidate));
+                                    });
+                                    iceCandidates.set(receiverSocketId, []);
                                 });
 
                                 socket.on("ice-candidate", async ({ candidate, receiverSocketId }) => {
-                                    if (peerConnections.get(receiverSocketId).remoteDescription && peerConnections.get(receiverSocketId).remoteDescription.type) {
+                                    if (remoteDescriptionSet.get(receiverSocketId)) {
                                         await peerConnections.get(receiverSocketId).addIceCandidate(new RTCIceCandidate(candidate));
                                     }
                                     else {
                                         console.log("ICE candidate received before setting remote description");
+                                        iceCandidates.get(receiverSocketId).push(candidate);
                                     }
                                 });
                             }
