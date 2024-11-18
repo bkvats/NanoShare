@@ -86,6 +86,7 @@ export default function Receive() {
                             try {
                                 dispatch(displayLoader("Verifying Code..."));
                                 let senderSocketId = "";
+                                let innerDownloadFiles = [];
                                 socket.emit("check-code", code.join(""), (response) => {
                                     if (response.success) {
                                         senderSocketId = response.data.socketId;
@@ -102,18 +103,13 @@ export default function Receive() {
                                 const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
 
                                 pc.ondatachannel = (event) => {
+                                    console.log(event.channel.label);
                                     let i = 0;
-                                    setDataChannel(event.channel);
-                                    const dataChannel = event.channel;
-                                    let innerDownloadFiles = [];
-                                    dataChannel.onopen = () => {
-                                        console.log("Data channel is open to receive files");
-                                    }
-                                    dataChannel.onclose = () => {
-                                        console.log("Data Channel is close on receiver side");
-                                    }
-                                    dataChannel.onmessage = (event) => {
-                                        if (typeof event.data === "string") {
+                                    const dataWorker = new Worker("/src/utils/dataWorker.js");
+                                    if (event.channel.label === "messageTransfer") {
+                                        const messageChannel = event.channel;
+                                        setDataChannel(messageChannel);
+                                        messageChannel.onmessage = (event) => {
                                             const data = JSON.parse(event.data);
                                             if (data.type === "dataInfo") {
                                                 innerDownloadFiles = [...data.infoOfFiles.map((file, index) => {
@@ -123,12 +119,13 @@ export default function Receive() {
                                                         filesize: file.filesize,
                                                         status: index == 0 ? "active" : "waiting",
                                                         receivedSize: 0,
-                                                        startTime: Date.now(),
+                                                        startTime: null,
                                                         elapsedTime: 0,
                                                         chunks: [],
                                                         downloadurl: null
                                                     }
                                                 })];
+                                                console.log("innerDownloadFiles:", innerDownloadFiles);
                                                 setDownloadFiles([...innerDownloadFiles]);
                                                 dispatch(setIsLoading(false));
                                                 setStep(prev => prev + 1);
@@ -153,21 +150,45 @@ export default function Receive() {
                                                 }
                                             }
                                         }
-                                        else {
+                                    }
+                                    else {
+                                        const dataChannel = event.channel;
+                                        dataChannel.onopen = () => {
+                                            console.log("Data channel is open to receive files");
+                                        }
+                                        dataChannel.onclose = () => {
+                                            console.log("Data Channel is close on receiver side");
+                                        }
+                                        dataChannel.onmessage = (event) => {
+                                            // console.log("i:", i);
+                                            const dataChunk = event.data;
+                                            // console.log("data is coming:", event.data.byteLength);
                                             const file = innerDownloadFiles[i];
-                                            file.chunks.push(event.data);
-                                            file.receivedSize += event.data.byteLength;
-                                            setFileReceivedSize(file.receivedSize);
-                                            setReceivedPercentage((file.receivedSize * 100 / file.filesize).toFixed(2));
-                                            file.elapsedTime = Math.floor((Date.now() - file.startTime) / 1000);
-                                            const speed = Math.floor(file.receivedSize / file.elapsedTime);
-                                            setTransferSpeed(speed);
-                                            setTimeLeft((file.filesize - file.receivedSize) / speed);
+                                            dataWorker.postMessage({dataChunk,file});
+                                            // if (file.startTime == null) file.startTime = Date.now();
+                                            // file.chunks.push(event.data);
+                                            // file.receivedSize += event.data.byteLength;
+                                            // file.elapsedTime = Math.floor((Date.now() - file.startTime) / 1000);
+                                            // const speed = Math.floor(file.receivedSize / file.elapsedTime);
+                                            // setFileReceivedSize(file.receivedSize);
+                                            // setReceivedPercentage((file.receivedSize * 100 / file.filesize).toFixed(2));
+                                            // setTransferSpeed(speed);
+                                            // setTimeLeft((file.filesize - file.receivedSize) / speed);
                                             console.log("recieved file chunk of size:", event.data.byteLength);
                                         }
+                                        dataChannel.onerror = (error) => {
+                                            console.log("error in datachannel", error);
+                                        }
+                                    }
+                                    dataWorker.onmessage = (event) => {
+                                        const {file} = event.data;
+                                        // setFileReceivedSize(file.receivedSize);
+                                        // setTransferSpeed(speed);
+                                        // setReceivedPercentage(receivedPercentage);
+                                        // setTimeLeft(timeLeft);
+                                        console.log("saved size:", file.chunks.at(-1).byteLength);
                                     }
                                 }
-
                                 socket.on("sdp-offer", async (offer) => {
                                     console.log("got sdp offer on receiver side:", offer);
                                     await pc.setRemoteDescription(new RTCSessionDescription(offer));
@@ -196,7 +217,8 @@ export default function Receive() {
                             }
                             catch (error) {
                                 dispatch(displayToast({ message: "Something went wrong, Please try again!", type: "error" }));
-                                console.log(error.message);
+                                dispatch(setIsLoading(false));
+                                throw error;
                             }
                         }}><GoArrowRight /></button>
                     </div>
@@ -225,6 +247,9 @@ export default function Receive() {
                         onClick={() => {
                             dataChannel.send(JSON.stringify({ type: "trigger", startSending: true }));
                             setStep(prev => prev + 1);
+                            // setInterval(() => {
+
+                            // }, 1000);
                         }}
                     >Receive</button>
                 </div>
