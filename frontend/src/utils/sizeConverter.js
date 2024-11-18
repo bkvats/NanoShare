@@ -12,4 +12,3 @@ export default function sizeConverter(size) {
     for (; size >= 1024; count++, size /= 1024);
     return `${size.toFixed(2)} ${sizeMap.get(count)}`;
 }
-

@@ -136,8 +136,6 @@ export default function Send() {
                             dispatch(displayLoader());
                             try {
                                 const peerConnections = new Map();
-                                const iceCandidates = new Map();
-                                const remoteDescriptionSet = new Map();
                                 socket.emit("get-code", allowMultipleReceivers, async (response) => {
                                     if (response.success) {
                                         setAccessCode(response.data.code);
@@ -154,97 +152,62 @@ export default function Send() {
                                     console.log(receiverSocketId, "trying to setup a new connection..");
                                     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
                                     peerConnections.set(receiverSocketId, pc);
-                                    iceCandidates.set(receiverSocketId, []);
-                                    remoteDescriptionSet.set(receiverSocketId, false);
-                                    const dataChannels = [];
-                                    const messageChannel = pc.createDataChannel("messageTransfer");
-                                    for (let i = 0; i < 10; i++) {
-                                        dataChannels.push(pc.createDataChannel("fileTransfer" + i));
-                                    }
-                                    dataChannels.forEach((dc, index) => {
-                                        dc.onopen = () => {
-                                            console.log(`Data Channel ${index} is open to send files`);
+                                    const dataChannel = pc.createDataChannel("fileTransfer");
+                                    dataChannel.onopen = () => {
+                                        console.log("Data channel is open to send files");
+                                        if (!allowMultipleReceivers && peerConnections.size == 1) {
+                                            console.log("sending block request to server");
+                                            socket.emit("change-permission", { senderSocketId: socket.id, isSending: false });
                                         }
-                                        dc.onclose = () => {
-                                            console.log(`Data Channel ${index} is closed and not sending fiels anymore`);
-                                        }
-                                    });
-                                    // let i = 0;
-                                    function sendFile(file) {
-                                        function sendNextChunk() {
-                                            if (offset < file.size) {
-                                                const slice = file.slice(offset, offset + chunkSize);
-                                                const reader = new FileReader();
-                                                reader.onload = (event) => {
-                                                    dataChannels[i].send(event.target.result);
-                                                    console.log("Sent file chunk of size:", event.target.result.byteLength);
-                                                    i = (i + 1) % 10;
-                                                    sendNextChunk();
+                                        function sendFile(file) {
+                                            function sendNextChunk() {
+                                                if (offset < file.size) {
+                                                    if (dataChannel.bufferedAmount < chunkSize * 10) {
+                                                        const slice = file.slice(offset, offset + chunkSize);
+                                                        reader.readAsArrayBuffer(slice);
+                                                        offset += chunkSize;
+                                                    }
+                                                    else {
+                                                        console.log("Buffer is full please wait...");
+                                                        setTimeout(sendNextChunk, 100);
+                                                    }
                                                 }
-                                                reader.readAsArrayBuffer(slice);
-                                                offset += chunkSize;
+                                                else {
+                                                    console.log("file sent successfully");
+                                                    dataChannel.send(JSON.stringify({ type: "response", EOF: true }));
+                                                    videoRef.current.pause();
+                                                    sendFile(files[++i]);
+                                                }
                                             }
-                                            else {
-                                                messageChannel.send(JSON.stringify({type: "response", EOF: true}));
-                                                console.log("file sent succesfully");
+                                            if (!file) return;
+                                            console.log("-------------------\nSending file:", i, "\n---------------");
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => {
+                                                dataChannel.send(event.target.result);
+                                                sendNextChunk();
                                             }
+                                            const chunkSize = 16 * 1024;
+                                            let offset = 0;
+                                            dataChannel.send(JSON.stringify({ type: "fileInfo", fileType: file.type, fileName: file.name }));
+                                            videoRef.current.play();
+                                            sendNextChunk();
                                         }
-                                        videoRef.current.play();
-                                        let i = 0;
-                                        const chunkSize = 16 * 1024;
-                                        let offset = 0;
-
-                                        // files.forEach((file) => {
-                                        //     console.log("-------------------\nSending file:", file.name, "\n---------------");
-                                        //     let chunkSize = 16 * 1024;
-                                        //     let offset = 0;
-                                        //     messageChannel.send(JSON.stringify({ type: "fileInfo", fileType: file.type, fileName: file.name }));
-                                        //     for (let i = 0; offset < file.size; i = (i + 1) % 10) {
-                                        //         console.log("trying to send file");
-                                        //         const slice = file.slice(offset, offset + chunkSize);
-                                        //         const reader = new FileReader();
-                                        //         reader.onload = (event) => {
-                                        //             dataChannels[i].send(event.target.result);
-                                        //             console.log("sent data of size:", event.target.result.byteLength);
-                                        //         }
-                                        //         reader.readAsArrayBuffer(slice);
-                                        //         offset += chunkSize;
-                                        //     }
-                                        //     console.log(file.name + " file send successfully");
-                                        // })
-                                        sendNextChunk();
-                                    }
-
-                                    messageChannel.onopen = () => {
-                                        console.log("The message channel is open at sender's page for messaging...");
-                                        messageChannel.send(JSON.stringify({
+                                        dataChannel.send(JSON.stringify({
                                             type: "dataInfo", infoOfFiles: files.map((file) => {
                                                 return { filename: file.name, filetype: file.type, filesize: file.size }
                                             })
                                         }));
-                                        messageChannel.onmessage = (event) => {
+                                        let i = 0;
+                                        dataChannel.onmessage = (event) => {
                                             const data = JSON.parse(event.data);
                                             if (data.type === "trigger" && data.startSending) {
-                                                sendFile(files[0]);
+                                                sendFile(files[i]);
                                             }
                                         }
                                     }
-                                    messageChannel.onclose = () => {
-                                        console.log("Message channel on sender's page is closed...");
+                                    dataChannel.onclose = () => {
+                                        console.log("Data channel is no more sending files");
                                     }
-
-                                    // dataChannel.onopen = () => {
-                                    //     console.log("Data channel is open to send files");
-                                    //     if (!allowMultipleReceivers && peerConnections.size == 1) {
-                                    //         console.log("sending block request to server");
-                                    //         socket.emit("change-permission", { senderSocketId: socket.id, isSending: false });
-                                    //     }
-
-
-                                    // }
-                                    // dataChannel.onclose = () => {
-                                    //     console.log("Data channel is no more sending files");
-                                    // }
                                     pc.onicecandidate = (event) => {
                                         if (event.candidate) {
                                             socket.emit("ice-candidate", {
@@ -263,21 +226,15 @@ export default function Send() {
 
                                 socket.on("sdp-answer", async ({ answer, receiverSocketId }) => {
                                     console.log("got sdp answer from receiver:", answer);
-                                    await peerConnections.get(receiverSocketId).setRemoteDescription(new RTCSessionDescription(answer));
-                                    remoteDescriptionSet.set(receiverSocketId, true);
-                                    iceCandidates.get(receiverSocketId).map((candidate) => {
-                                        peerConnections.get(receiverSocketId).addIceCandidate(new RTCIceCandidate(candidate));
-                                    });
-                                    iceCandidates.set(receiverSocketId, []);
+                                    peerConnections.get(receiverSocketId).setRemoteDescription(new RTCSessionDescription(answer));
                                 });
 
                                 socket.on("ice-candidate", async ({ candidate, receiverSocketId }) => {
-                                    if (remoteDescriptionSet.get(receiverSocketId)) {
+                                    if (peerConnections.get(receiverSocketId).remoteDescription && peerConnections.get(receiverSocketId).remoteDescription.type) {
                                         await peerConnections.get(receiverSocketId).addIceCandidate(new RTCIceCandidate(candidate));
                                     }
                                     else {
                                         console.log("ICE candidate received before setting remote description");
-                                        iceCandidates.get(receiverSocketId).push(candidate);
                                     }
                                 });
                             }

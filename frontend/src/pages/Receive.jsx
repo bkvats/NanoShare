@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { GoDotFill } from "react-icons/go";
 import { MdOutlineBackspace } from "react-icons/md";
@@ -9,7 +9,6 @@ import getSocket from "../socket";
 import { displayLoader, setIsLoading } from "../store/loaderSlice";
 import FileIcon from "../components/FileIcon";
 import sizeConverter from "../utils/sizeConverter";
-import SimpleProgressCard from "../components/SimpleProgressCard";
 
 const socket = getSocket();
 
@@ -17,13 +16,8 @@ export default function Receive() {
     const [code, setCode] = useState([-1, -1, -1, -1, -1, -1]);
     const [step, setStep] = useState(1);
     const [dataInfo, setDataInfo] = useState("Total 7 file/s of 336.56 MB");
-    const [downloadFiles, setDownloadFiles] = useState([]);
+    const [infoOfFiles, setInfoOfFiles] = useState([]);
     const [dataChannel, setDataChannel] = useState(null);
-    const [transferSpeed, setTransferSpeed] = useState(0);
-    const [receivedpercentage, setReceivedPercentage] = useState(0);
-    const [fileReceivedSize, setFileReceivedSize] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(0);
-    const videoRef = useRef(null);
     const dispatch = useDispatch();
     return (
         <>
@@ -37,7 +31,7 @@ export default function Receive() {
                             ))
                         }
                     </div>
-                    <div className="py-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6 lg:gap-8">
+                    <div className="my-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6 lg:gap-8">
                         {
                             "123456789".split("").map((number) => (
                                 <button key={number} className="w-fit text-center mx-4 lg:hover:bg-gray-900 px-4 py-2 rounded-full transition duration-300" onClick={() => {
@@ -103,77 +97,48 @@ export default function Receive() {
                                 const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
 
                                 pc.ondatachannel = (event) => {
-                                    console.log(event.channel.label);
-                                    let i = 0;
-                                    const dataWorker = new Worker("/src/utils/dataWorker.js");
-                                    if (event.channel.label === "messageTransfer") {
-                                        const messageChannel = event.channel;
-                                        setDataChannel(messageChannel);
-                                        messageChannel.onmessage = (event) => {
+                                    let chunks = [];
+                                    let fileType = "";
+                                    let fileName = "";
+                                    setDataChannel(event.channel);
+                                    const dataChannel = event.channel;
+                                    dataChannel.onopen = () => {
+                                        console.log("Data channel is open to receive files");
+                                    }
+                                    dataChannel.onclose = () => {
+                                        console.log("Data Channel is close on receiver side");
+                                    }
+                                    dataChannel.onmessage = (event) => {
+                                        if (typeof event.data === "string") {
                                             const data = JSON.parse(event.data);
                                             if (data.type === "dataInfo") {
-                                                innerDownloadFiles = [...data.infoOfFiles.map((file, index) => {
-                                                    return {
-                                                        filetype: file.filetype,
-                                                        filename: file.filename,
-                                                        filesize: file.filesize,
-                                                        status: index == 0 ? "active" : "waiting",
-                                                        receivedSize: 0,
-                                                        startTime: null,
-                                                        elapsedTime: 0,
-                                                        chunks: [],
-                                                        downloadurl: null
-                                                    }
-                                                })];
-                                                console.log("innerDownloadFiles:", innerDownloadFiles);
-                                                setDownloadFiles([...innerDownloadFiles]);
+                                                setInfoOfFiles(data.infoOfFiles)
                                                 dispatch(setIsLoading(false));
                                                 setStep(prev => prev + 1);
+                                            }
+                                            else if (data.type === "fileInfo") {
+                                                fileType = data.fileType;
+                                                fileName = data.fileName;
+                                                console.log("Receving file of type:", fileType, "\nName:", fileName);
                                             }
                                             else if (data.type === "response") {
                                                 if (data.EOF) {
                                                     console.log("file received succesfully....");
-                                                    const blob = new Blob(innerDownloadFiles[i].chunks, { type: innerDownloadFiles[i].filetype });
+                                                    const blob = new Blob(chunks, { type: fileType });
                                                     const downloadUrl = URL.createObjectURL(blob);
-                                                    innerDownloadFiles[i].downloadurl = downloadUrl;
                                                     const link = document.createElement("a");
                                                     link.href = downloadUrl;
                                                     link.hidden = true;
-                                                    link.download = `NanoShare_${innerDownloadFiles[i].filename}`
+                                                    link.download = `NanoShare_${fileName}`
                                                     document.body.appendChild(link);
                                                     link.click();
                                                     document.body.removeChild(link);
-                                                    innerDownloadFiles[i].status = "completed"
-                                                    i++;
-                                                    innerDownloadFiles[i].status = "active";
-                                                    setDownloadFiles([...innerDownloadFiles]);
+                                                    chunks = [];
                                                 }
                                             }
                                         }
-                                    }
-                                    else {
-                                        const dataChannel = event.channel;
-                                        dataChannel.onopen = () => {
-                                            console.log("Data channel is open to receive files");
-                                        }
-                                        dataChannel.onclose = () => {
-                                            console.log("Data Channel is close on receiver side");
-                                        }
-                                        dataChannel.onmessage = (event) => {
-                                            // console.log("i:", i);
-                                            const dataChunk = event.data;
-                                            // console.log("data is coming:", event.data.byteLength);
-                                            const file = innerDownloadFiles[i];
-                                            dataWorker.postMessage({dataChunk,file});
-                                            // if (file.startTime == null) file.startTime = Date.now();
-                                            // file.chunks.push(event.data);
-                                            // file.receivedSize += event.data.byteLength;
-                                            // file.elapsedTime = Math.floor((Date.now() - file.startTime) / 1000);
-                                            // const speed = Math.floor(file.receivedSize / file.elapsedTime);
-                                            // setFileReceivedSize(file.receivedSize);
-                                            // setReceivedPercentage((file.receivedSize * 100 / file.filesize).toFixed(2));
-                                            // setTransferSpeed(speed);
-                                            // setTimeLeft((file.filesize - file.receivedSize) / speed);
+                                        else {
+                                            chunks.push(event.data);
                                             console.log("recieved file chunk of size:", event.data.byteLength);
                                         }
                                         dataChannel.onerror = (error) => {
@@ -227,10 +192,10 @@ export default function Receive() {
             {
                 step == 2 &&
                 <div className="flex flex-col items-center">
-                    <p className="text-2xl my-8 text-white-light font-light">Total <span className="text-white font-black">{`${downloadFiles.length} file/s`} </span> of <span className="text-white font-black">{`${sizeConverter(downloadFiles.map(i => i.filesize).reduce((a, b) => a + b))}`}</span></p>
+                    <p className="text-2xl my-8 text-white-light font-light">Total <span className="text-white font-black">{`${infoOfFiles.length} file/s`} </span> of <span className="text-white font-black">{`${sizeConverter(infoOfFiles.map(i => i.filesize).reduce((a, b) => a + b))}`}</span></p>
                     <div className="border-white border-dashed bg-opacity-70 border rounded-2xl text-2xl w-[97%] lg:w-1/2 h-80 p-4 flex flex-wrap overflow-y-auto gap-2 justify-evenly items-start">
                         {
-                            downloadFiles.map((file, index) => (
+                            infoOfFiles.map((file, index) => (
                                 <div key={index} className="max-w-24 px-2 max-h-36 overflow-hidden flex flex-col gap-2 my-4 relative">
                                     {
                                         <>
@@ -243,30 +208,11 @@ export default function Receive() {
                         }
                     </div>
                     <button
-                        className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition"
-                        onClick={() => {
-                            dataChannel.send(JSON.stringify({ type: "trigger", startSending: true }));
-                            setStep(prev => prev + 1);
-                            // setInterval(() => {
-
-                            // }, 1000);
-                        }}
+                    className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition"
+                    onClick={() => {
+                        dataChannel.send(JSON.stringify({type: "trigger", startSending: true}))
+                    }}
                     >Receive</button>
-                </div>
-            }
-            {
-                step == 3 &&
-                <div className="flex justify-center">
-                    <div className="fixed bottom-0">
-                        <video style={{ height: "calc(100vh - 8.5rem)" }} ref={videoRef} src="https://hrcdn.net/fcore/assets/onboarding/globe-5fdfa9a0f4.mp4" className="object-cover object-center" autoPlay loop />
-                    </div>
-                    <div className="border-0 overflow-auto w-[97%] lg:w-1/2">
-                        {
-                            downloadFiles.map((file) => (
-                                <SimpleProgressCard {...file} status={file.status} speed={transferSpeed} timeLeft={timeLeft} receivedSize={fileReceivedSize} receivedPercentage={receivedpercentage} downloadurl={file.downloadurl} key={file.filename} />
-                            ))
-                        }
-                    </div>
                 </div>
             }
         </>

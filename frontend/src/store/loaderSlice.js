@@ -11,7 +11,6 @@ export const loaderSlice = createSlice({
             state.isLoading = action.payload;
         },
         displayLoader: (state, action) => {
-            if (state.isLoading) state.isLoading = false;
             state.loadingMessage = action?.payload || "Please wait...";
             state.isLoading = true;
         }
