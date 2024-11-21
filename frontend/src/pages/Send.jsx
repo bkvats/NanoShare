@@ -4,13 +4,14 @@ import { CiSquarePlus } from "react-icons/ci";
 import FileIcon from "../components/FileIcon";
 import { FaEye, } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa";
-import { MdContentCopy } from "react-icons/md";
+import { MdContentCopy, MdNoEncryptionGmailerrorred } from "react-icons/md";
 import { useDispatch } from "react-redux";
 import { displayToast } from "../store/toastSlice";
 import getSocket from "../socket";
 import ToggleButton from "../components/ToggleButton";
 import { displayLoader, setIsLoading } from "../store/loaderSlice";
 import sizeConverter from "../utils/sizeConverter";
+import { decodeJson, encodeJson } from "../utils/jsonResponse";
 
 const socket = getSocket();
 
@@ -24,35 +25,6 @@ export default function Send() {
     const [allowMultipleReceivers, setAllowMultipleReceivers] = useState(false);
     const videoRef = useRef(null);
     const dispatch = useDispatch();
-    // const fileIcons = new Map([
-    //     ["image", <CiImageOn />],
-    //     ["video", <LuClapperboard />],
-    //     ["audio", <MdAudiotrack />],
-    //     ["pdf", <FaRegFilePdf />],
-    //     ["docx", <PiMicrosoftWordLogoFill />],
-    //     ["zip", <FaFileZipper />],
-    //     ["pptx", <SiMicrosoftpowerpoint />],
-    //     ["xlsx", <SiMicrosoftexcel />],
-    //     ["txt", <GrDocumentTxt />],
-    //     ["py", <FaPython />],
-    //     ["java", <FaJava />],
-    //     ["cpp", <TbBrandCpp />],
-    //     ["c", <SiVisualstudiocode />],
-    //     ["html", <FaHtml5 />],
-    //     ["css", <FaCss3 />],
-    //     ["js", <DiJsBadge />],
-    //     ["ts", <SiTypescript />],
-    //     ["exe", <BsFiletypeExe />],
-    //     ["json", <LuFileJson2 />],
-    //     ["other", <CiFileOn />]
-    // ]);
-
-    // function getFileIcon(file) {
-    //     if (fileIcons.has(file.type.split("/")[0])) return fileIcons.get(file.type.split("/")[0]);
-    //     if (fileIcons.has(file.name.split(".").at(-1))) return fileIcons.get(file.name.split(".").at(-1));
-    //     return fileIcons.get("other");
-    // }
-
     useEffect(() => {
         socket.on("connect", () => {
             console.log("socket connected in send page", socket.id);
@@ -136,6 +108,8 @@ export default function Send() {
                             dispatch(displayLoader());
                             try {
                                 const peerConnections = new Map();
+                                const iceCandidates = new Map();
+                                const remoteDescriptionSet = new Map();
                                 socket.emit("get-code", allowMultipleReceivers, async (response) => {
                                     if (response.success) {
                                         setAccessCode(response.data.code);
@@ -152,61 +126,68 @@ export default function Send() {
                                     console.log(receiverSocketId, "trying to setup a new connection..");
                                     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
                                     peerConnections.set(receiverSocketId, pc);
-                                    const dataChannel = pc.createDataChannel("fileTransfer");
+                                    iceCandidates.set(receiverSocketId, []);
+                                    remoteDescriptionSet.set(receiverSocketId, false);
+                                    const dataChannel = pc.createDataChannel("dataChannel");
+                                    dataChannel.binaryType = "arraybuffer";
                                     dataChannel.onopen = () => {
-                                        console.log("Data channel is open to send files");
-                                        if (!allowMultipleReceivers && peerConnections.size == 1) {
-                                            console.log("sending block request to server");
-                                            socket.emit("change-permission", { senderSocketId: socket.id, isSending: false });
-                                        }
-                                        function sendFile(file) {
-                                            function sendNextChunk() {
-                                                if (offset < file.size) {
-                                                    if (dataChannel.bufferedAmount < chunkSize * 10) {
-                                                        const slice = file.slice(offset, offset + chunkSize);
-                                                        reader.readAsArrayBuffer(slice);
-                                                        offset += chunkSize;
-                                                    }
-                                                    else {
-                                                        console.log("Buffer is full please wait...");
-                                                        setTimeout(sendNextChunk, 100);
-                                                    }
-                                                }
-                                                else {
-                                                    console.log("file sent successfully");
-                                                    dataChannel.send(JSON.stringify({ type: "response", EOF: true }));
-                                                    videoRef.current.pause();
-                                                    sendFile(files[++i]);
-                                                }
-                                            }
-                                            if (!file) return;
-                                            console.log("-------------------\nSending file:", i, "\n---------------");
-                                            const reader = new FileReader();
-                                            reader.onload = (event) => {
-                                                dataChannel.send(event.target.result);
-                                                sendNextChunk();
-                                            }
-                                            const chunkSize = 16 * 1024;
-                                            let offset = 0;
-                                            dataChannel.send(JSON.stringify({ type: "fileInfo", fileType: file.type, fileName: file.name }));
-                                            videoRef.current.play();
-                                            sendNextChunk();
-                                        }
-                                        dataChannel.send(JSON.stringify({
-                                            type: "dataInfo", infoOfFiles: files.map((file) => {
-                                                return { filename: file.name, filetype: file.type, filesize: file.size }
-                                            })
-                                        }));
-                                        let i = 0;
-                                        dataChannel.onmessage = (event) => {
-                                            const data = JSON.parse(event.data);
-                                            if (data.type === "trigger" && data.startSending) {
-                                                sendFile(files[i]);
-                                            }
-                                        }
+                                        console.log("Data channel is open on sender side");
                                     }
                                     dataChannel.onclose = () => {
-                                        console.log("Data channel is no more sending files");
+                                        console.log("Data channel is closed on sender side");
+                                    }
+                                    function sendFile(file) {
+                                        function sendNextChunk() {
+                                            if (offset < file.size) {
+                                                if (dataChannel.bufferedAmount < chunkSize * 10) {
+                                                    const chunk = file.slice(offset, offset + chunkSize);
+                                                    fileReader.readAsArrayBuffer(chunk);
+                                                    offset += chunkSize;
+                                                }
+                                                else {
+                                                    console.log("Buffer is full please wait..");
+                                                    setTimeout(sendNextChunk, 100);
+                                                }
+
+                                            }
+                                            else {
+                                                console.log("file sent succesfully");
+                                            }
+                                        }
+                                        let offset = 0;
+                                        const chunkSize = 256 * 1024;
+                                        const fileReader = new FileReader();
+                                        fileReader.onload = (event) => {
+                                            const chunk = event.target.result;
+                                            dataChannel.send(chunk);
+                                            console.log("sent file of size:", chunk.byteLength);
+                                            sendNextChunk();
+                                        }
+                                        sendNextChunk();
+                                    }
+                                    dataChannel.onmessage = (event) => {
+                                        const message = decodeJson(event.data);
+                                        if (message.type === "get-files") {
+                                            console.log("sending file info");
+                                            dataChannel.send(JSON.stringify({
+                                                type: "files", data: files.map((i, index) => {
+                                                    return {
+                                                        filename: i.name,
+                                                        filetype: i.type,
+                                                        filesize: i.size,
+                                                        status: index == 0 ? "active" : "waiting",
+                                                        chunks: [],
+                                                        received: 0,
+                                                        startTime: 0,
+                                                    }
+                                                })
+                                            }));
+                                            console.log("after sending file info");
+                                        }
+                                        else if (message.type === "send-file") {
+                                            console.log("sending file data");
+                                            sendFile(files[message.data])
+                                        }
                                     }
                                     pc.onicecandidate = (event) => {
                                         if (event.candidate) {
@@ -226,15 +207,21 @@ export default function Send() {
 
                                 socket.on("sdp-answer", async ({ answer, receiverSocketId }) => {
                                     console.log("got sdp answer from receiver:", answer);
-                                    peerConnections.get(receiverSocketId).setRemoteDescription(new RTCSessionDescription(answer));
+                                    await peerConnections.get(receiverSocketId).setRemoteDescription(new RTCSessionDescription(answer));
+                                    remoteDescriptionSet.set(receiverSocketId, true);
+                                    iceCandidates.get(receiverSocketId).map((candidate) => {
+                                        peerConnections.get(receiverSocketId).addIceCandidate(new RTCIceCandidate(candidate));
+                                    });
+                                    iceCandidates.set(receiverSocketId, []);
                                 });
 
                                 socket.on("ice-candidate", async ({ candidate, receiverSocketId }) => {
-                                    if (peerConnections.get(receiverSocketId).remoteDescription && peerConnections.get(receiverSocketId).remoteDescription.type) {
+                                    if (remoteDescriptionSet.get(receiverSocketId)) {
                                         await peerConnections.get(receiverSocketId).addIceCandidate(new RTCIceCandidate(candidate));
                                     }
                                     else {
                                         console.log("ICE candidate received before setting remote description");
+                                        iceCandidates.get(receiverSocketId).push(candidate);
                                     }
                                 });
                             }

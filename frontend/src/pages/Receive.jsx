@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
 import { GoDotFill } from "react-icons/go";
 import { MdOutlineBackspace } from "react-icons/md";
@@ -9,15 +9,21 @@ import getSocket from "../socket";
 import { displayLoader, setIsLoading } from "../store/loaderSlice";
 import FileIcon from "../components/FileIcon";
 import sizeConverter from "../utils/sizeConverter";
+import SimpleProgressCard from "../components/SimpleProgressCard";
+import { decodeJson, encodeJson } from "../utils/jsonResponse";
 
 const socket = getSocket();
 
 export default function Receive() {
     const [code, setCode] = useState([-1, -1, -1, -1, -1, -1]);
     const [step, setStep] = useState(1);
-    const [dataInfo, setDataInfo] = useState("Total 7 file/s of 336.56 MB");
-    const [infoOfFiles, setInfoOfFiles] = useState([]);
-    const [dataChannel, setDataChannel] = useState(null);
+    const [files, setFiles] = useState([]);
+    const [controlChannel, setControlChannel] = useState(null);
+    const [transferSpeed, setTransferSpeed] = useState(0);
+    const [receivedpercentage, setReceivedPercentage] = useState(0);
+    const [fileReceivedSize, setFileReceivedSize] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(0);
+    const videoRef = useRef(null);
     const dispatch = useDispatch();
     return (
         <>
@@ -31,7 +37,7 @@ export default function Receive() {
                             ))
                         }
                     </div>
-                    <div className="my-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6 lg:gap-8">
+                    <div className="py-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6 lg:gap-8">
                         {
                             "123456789".split("").map((number) => (
                                 <button key={number} className="w-fit text-center mx-4 lg:hover:bg-gray-900 px-4 py-2 rounded-full transition duration-300" onClick={() => {
@@ -80,12 +86,11 @@ export default function Receive() {
                             try {
                                 dispatch(displayLoader("Verifying Code..."));
                                 let senderSocketId = "";
-                                let innerDownloadFiles = [];
                                 socket.emit("check-code", code.join(""), (response) => {
                                     if (response.success) {
                                         senderSocketId = response.data.socketId;
                                         socket.emit("setupNewConnection", { senderSocketId, receiverSocketId: socket.id });
-                                        dispatch(displayLoader("Establishing a secure connection..."));
+                                        dispatch(setIsLoading(false));
                                     }
                                     else {
                                         dispatch(setIsLoading(false));
@@ -95,63 +100,51 @@ export default function Receive() {
                                 });
 
                                 const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-
+                                let fastFiles = [];
+                                let i = 0;
                                 pc.ondatachannel = (event) => {
-                                    let chunks = [];
-                                    let fileType = "";
-                                    let fileName = "";
-                                    setDataChannel(event.channel);
                                     const dataChannel = event.channel;
-                                    dataChannel.onopen = () => {
-                                        console.log("Data channel is open to receive files");
-                                    }
-                                    dataChannel.onclose = () => {
-                                        console.log("Data Channel is close on receiver side");
-                                    }
+                                    dataChannel.binaryType = "arraybuffer";
+                                    setControlChannel(dataChannel);
+                                    dataChannel.send(encodeJson("get-files"));
                                     dataChannel.onmessage = (event) => {
                                         if (typeof event.data === "string") {
-                                            const data = JSON.parse(event.data);
-                                            if (data.type === "dataInfo") {
-                                                setInfoOfFiles(data.infoOfFiles)
-                                                dispatch(setIsLoading(false));
+                                            const message = decodeJson(event.data);
+                                            if (message.type === "files") {
+                                                console.log("got files info");
+                                                fastFiles = [...message.data];
+                                                setFiles(fastFiles);
                                                 setStep(prev => prev + 1);
-                                            }
-                                            else if (data.type === "fileInfo") {
-                                                fileType = data.fileType;
-                                                fileName = data.fileName;
-                                                console.log("Receving file of type:", fileType, "\nName:", fileName);
-                                            }
-                                            else if (data.type === "response") {
-                                                if (data.EOF) {
-                                                    console.log("file received succesfully....");
-                                                    const blob = new Blob(chunks, { type: fileType });
-                                                    const downloadUrl = URL.createObjectURL(blob);
-                                                    const link = document.createElement("a");
-                                                    link.href = downloadUrl;
-                                                    link.hidden = true;
-                                                    link.download = `NanoShare_${fileName}`
-                                                    document.body.appendChild(link);
-                                                    link.click();
-                                                    document.body.removeChild(link);
-                                                    chunks = [];
-                                                }
                                             }
                                         }
                                         else {
-                                            chunks.push(event.data);
-                                            console.log("recieved file chunk of size:", event.data.byteLength);
-                                        }
-                                        dataChannel.onerror = (error) => {
-                                            console.log("error in datachannel", error);
+                                            const file = fastFiles[i];
+                                            if (!file.startTime) file.startTime = Date.now();
+                                            const chunkData = event.data;
+                                            file.chunks.push(chunkData);
+                                            file.received += chunkData.byteLength;
+                                            setFileReceivedSize(prev => {
+                                                const newSize = prev + chunkData.byteLength;
+                                                setReceivedPercentage((newSize * 100 / file.filesize));
+                                                const speed = (newSize / ((Date.now() - file.startTime) / 1000));
+                                                setTransferSpeed(speed);
+                                                setTimeLeft((file.filesize - newSize) / speed);
+                                                return newSize;
+                                            });
+                                            console.log("getting file chunk:", chunkData.byteLength);
+                                            if (file.received == file.filesize) {
+                                                console.log("generating file for downloading...");
+                                                const blob = new Blob(file.chunks, { type: file.filetype });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement("a");
+                                                a.href = url;
+                                                a.download = file.filename;
+                                                a.click();
+                                            }
                                         }
                                     }
-                                    dataWorker.onmessage = (event) => {
-                                        const {file} = event.data;
-                                        // setFileReceivedSize(file.receivedSize);
-                                        // setTransferSpeed(speed);
-                                        // setReceivedPercentage(receivedPercentage);
-                                        // setTimeLeft(timeLeft);
-                                        console.log("saved size:", file.chunks.at(-1).byteLength);
+                                    dataChannel.onopen = () => {
+                                        console.log("Control channel is open");
                                     }
                                 }
                                 socket.on("sdp-offer", async (offer) => {
@@ -182,8 +175,7 @@ export default function Receive() {
                             }
                             catch (error) {
                                 dispatch(displayToast({ message: "Something went wrong, Please try again!", type: "error" }));
-                                dispatch(setIsLoading(false));
-                                throw error;
+                                console.log(error.message);
                             }
                         }}><GoArrowRight /></button>
                     </div>
@@ -192,10 +184,10 @@ export default function Receive() {
             {
                 step == 2 &&
                 <div className="flex flex-col items-center">
-                    <p className="text-2xl my-8 text-white-light font-light">Total <span className="text-white font-black">{`${infoOfFiles.length} file/s`} </span> of <span className="text-white font-black">{`${sizeConverter(infoOfFiles.map(i => i.filesize).reduce((a, b) => a + b))}`}</span></p>
+                    <p className="text-2xl my-8 text-white-light font-light">Total <span className="text-white font-black">{`${files.length} file/s`} </span> of <span className="text-white font-black">{`${sizeConverter(files.map(i => i.filesize).reduce((a, b) => a + b))}`}</span></p>
                     <div className="border-white border-dashed bg-opacity-70 border rounded-2xl text-2xl w-[97%] lg:w-1/2 h-80 p-4 flex flex-wrap overflow-y-auto gap-2 justify-evenly items-start">
                         {
-                            infoOfFiles.map((file, index) => (
+                            files.map((file, index) => (
                                 <div key={index} className="max-w-24 px-2 max-h-36 overflow-hidden flex flex-col gap-2 my-4 relative">
                                     {
                                         <>
@@ -208,11 +200,27 @@ export default function Receive() {
                         }
                     </div>
                     <button
-                    className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition"
-                    onClick={() => {
-                        dataChannel.send(JSON.stringify({type: "trigger", startSending: true}))
-                    }}
+                        className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition"
+                        onClick={() => {
+                            controlChannel.send(encodeJson("send-file", 0));
+                            setStep(prev => prev + 1);
+                        }}
                     >Receive</button>
+                </div>
+            }
+            {
+                step == 3 &&
+                <div className="flex justify-center">
+                    <div className="fixed bottom-0">
+                        <video style={{ height: "calc(100vh - 8.5rem)" }} ref={videoRef} src="https://hrcdn.net/fcore/assets/onboarding/globe-5fdfa9a0f4.mp4" className="object-cover object-center" autoPlay loop />
+                    </div>
+                    <div className="border-0 overflow-auto w-[97%] lg:w-1/2">
+                        {
+                            files.map((file) => (
+                                <SimpleProgressCard {...file} status={file.status} speed={transferSpeed} timeLeft={timeLeft} receivedSize={fileReceivedSize} receivedPercentage={receivedpercentage} downloadurl={file.downloadurl} key={file.filename} />
+                            ))
+                        }
+                    </div>
                 </div>
             }
         </>

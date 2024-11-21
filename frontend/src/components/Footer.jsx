@@ -34,7 +34,7 @@ export default function Footer() {
         },
     ]
     return (
-        <footer className="text-xl w-full py-2 px-16 border-light min-h-24 flex flex-col justify-center items-center gap-2">
+        <footer className="text-xl w-full py-2 px-16 border-light min-h-24 flex flex-col justify-center items-center gap-2 absolute bg-black">
             <div className="flex gap-2 items-center flex-wrap justify-center">
                 <span className="text-white-light flex gap-2 items-center">
                     Handcrafted with <span className="text-white"><FaHeartCircleBolt /></span> by
