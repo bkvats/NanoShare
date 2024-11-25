@@ -140,6 +140,16 @@ export default function Receive() {
                                                 a.href = url;
                                                 a.download = file.filename;
                                                 a.click();
+                                                fastFiles[i].status = "completed";
+                                                i++;
+                                                fastFiles[i].status = "active";
+                                                setFiles([...fastFiles]);
+                                                setFileReceivedSize(0);
+                                                if (i < fastFiles.length) {
+                                                    setTimeout(() => {
+                                                        dataChannel.send(encodeJson("send-file", i));
+                                                    }, 2000)
+                                                }
                                             }
                                         }
                                     }

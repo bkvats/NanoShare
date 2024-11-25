@@ -186,7 +186,7 @@ export default function Send() {
                                         }
                                         else if (message.type === "send-file") {
                                             console.log("sending file data");
-                                            sendFile(files[message.data])
+                                            sendFile(files[message.data]);
                                         }
                                     }
                                     pc.onicecandidate = (event) => {
