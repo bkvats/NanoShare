@@ -7,6 +7,6 @@ export default async function dbConnect() {
     }
     catch (error) {
         console.log("An error occured while connecting to database:", error.message);
-        process.exit(1);
+        // process.exit(1);
     }
 }
