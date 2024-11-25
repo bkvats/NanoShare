@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon ./src/index.js"
+    "dev": "nodemon ./src/index.js",
+    "start": "node index.js"
   },
   "author": "Bhupender Kumar Sharma",
   "license": "ISC",
