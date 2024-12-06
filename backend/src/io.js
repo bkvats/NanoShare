@@ -11,7 +11,6 @@ export default function setupSocketIO(server) {
         }
     });
     io.on("connection", (socket) => {
-        console.log("a user is connected:", socket.id);
         socket.on("get-code", (allowMultipleReceivers, callback) => {
             asyncHandler(async () => {
                 let code = "";
@@ -35,7 +34,6 @@ export default function setupSocketIO(server) {
         });
 
         socket.on("change-permission", ({senderSocketId, isSending}) => {
-            console.log("Changing permission for:", senderSocketId);
             asyncHandler(async () => {
                 await AccessCode.findOneAndUpdate({socketId: senderSocketId}, {
                     $set: {
@@ -46,28 +44,23 @@ export default function setupSocketIO(server) {
         })
 
         socket.on("setupNewConnection", (ids) => {
-            console.log("ids received from receiver:", ids);
             io.to(ids.senderSocketId).emit("setupNewConnection", ids.receiverSocketId);
         });
 
         socket.on("sdp-offer", (data) => {
-            console.log("getting sdp offer on server:", data);
             io.to(data.receiverSocketId).emit("sdp-offer", data.offer);
         });
 
         socket.on("sdp-answer", (data) => {
-            console.log("getting sdp answer on server:", data);
             io.to(data.senderSocketId).emit("sdp-answer", { answer: data.answer, receiverSocketId: data.receiverSocketId });
         });
 
         socket.on("ice-candidate", ({ candidate, anotherEndSocketId, receiverSocketId }) => {
-            console.log("sending ice-candidate to:", anotherEndSocketId);
             io.to(anotherEndSocketId).emit("ice-candidate", { candidate, receiverSocketId });
         });
 
         socket.on("disconnect", async () => {
             await AccessCode.findOneAndDelete({ socketId: socket.id });
-            console.log("a user is disconnected:", socket.id);
         });
     });
 }

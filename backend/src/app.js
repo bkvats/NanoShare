@@ -2,6 +2,6 @@ import express from "express";
 
 const app = express();
 app.get("/", (_, res) => {
-    res.send("Server is running");
+    res.send("Signaling Server is running");
 });
 export default app;
