@@ -12,7 +12,7 @@ export default function Home() {
         {
             icon: <PiUploadLight size={"1rem"} />,
             title: "Upload file",
-            heading: "From your device to anywhere !",
+            heading: "From your device to anywhere!",
             subHeading: "Just drop your file here and let the magic begin.",
             imgUrl: "https://res.cloudinary.com/duhmeadz6/image/upload/v1731116184/drop-file_tmdctp.png",
             border: "border-r border-b"
@@ -53,7 +53,6 @@ export default function Home() {
                         <NavLink to={"/receive"} className="relative pl-9 pr-4 py-2 bg-black border text-white rounded-full  transition hover:scale-110"><IoTriangleSharp className="absolute left-3 lg:top-[12px] rotate-180" size={"18px"} />Receive a file</NavLink>
                     </div>
                 </div>
-                {/* <video src="https://hrcdn.net/fcore/assets/onboarding/globe-5fdfa9a0f4.mp4" className="h-screen min-w-full object-cover object-center lg:hidden" autoPlay muted loop /> */}
                 <video src="https://res.cloudinary.com/duhmeadz6/video/upload/v1731116359/space-bg_l1ktlq.mp4" className="h-screen min-w-full object-cover object-center" autoPlay muted loop />
             </div>
             <div className="flex flex-col items-center justify-center w-full py-10">
@@ -64,7 +63,7 @@ export default function Home() {
             <div className="lg:grid grid-cols-2 mx-auto lg:w-[80%]">
                 {
                     stepsCard.map((i) => (
-                        <div key={i.title} className={`border-white border-opacity-20 ${i.border} p-8 pb-2`}>
+                        <div key={i.title} className={`border-white border-opacity-0 lg:border-opacity-20 ${i.border} p-8 pb-2`}>
                             <span className="flex gap-2 items-center text-white-light">
                                 {i.icon}
                                 {i.title}
@@ -78,13 +77,6 @@ export default function Home() {
                     ))
                 }
             </div>
-            {/* <div className="mt-4">
-                <p className="text-2xl font-bold">Ready to Share? </p>
-                <div className="flex flex-col items-start gap-2 mt-4 pb-4">
-                    <button className="relative pl-9 pr-4 py-2 bg-white border border-black text-black rounded-full hover:bg-gray-300 transition"><IoTriangleSharp className="absolute left-2 top-[10px]" size={"20px"} />Send a file</button>
-                    <button className="relative pl-9 pr-4 py-2 bg-black border text-white rounded-full hover:bg-gray-900 transition"><IoTriangleSharp className="absolute left-3 top-[12px] rotate-180" size={"18px"} />Receive a file</button>
-                </div>
-            </div > */}
         </>
     )
 }

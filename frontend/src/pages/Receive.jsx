@@ -121,20 +121,22 @@ export default function Receive() {
                                             const chunkData = event.data;
                                             file.chunks.push(chunkData);
                                             file.received += chunkData.byteLength;
-                                            setFileReceivedSize(prev => {
-                                                const newSize = prev + chunkData.byteLength;
-                                                setReceivedPercentage((newSize * 100 / file.filesize));
-                                                const speed = (newSize / ((Date.now() - file.startTime) / 1000));
-                                                setTransferSpeed(speed);
-                                                setTimeLeft((file.filesize - newSize) / speed);
-                                                return newSize;
-                                            });
+                                            setTimeout(() => {
+                                                setFileReceivedSize(prev => {
+                                                    const newSize = prev + chunkData.byteLength;
+                                                    setReceivedPercentage((newSize * 100 / file.filesize));
+                                                    const speed = (newSize / ((Date.now() - file.startTime) / 1000));
+                                                    setTransferSpeed(speed);
+                                                    setTimeLeft((file.filesize - newSize) / speed);
+                                                    return newSize;
+                                                });
+                                            }, 1000);
                                             if (file.received == file.filesize) {
                                                 const blob = new Blob(file.chunks, { type: file.filetype });
                                                 const url = URL.createObjectURL(blob);
                                                 const a = document.createElement("a");
                                                 a.href = url;
-                                                a.download = file.filename;
+                                                a.download = `NanoShare_${file.filename}`;
                                                 a.click();
                                                 fastFiles[i].status = "completed";
                                                 fastFiles[i].downloadUrl = url;
@@ -142,11 +144,15 @@ export default function Receive() {
                                                 fastFiles[i].status = "active";
                                                 setFiles([...fastFiles]);
                                                 setFileReceivedSize(0);
+                                                setReceivedPercentage(0);
+                                                setTransferSpeed(0);
+                                                setTimeLeft(0);
                                                 if (i < fastFiles.length) {
                                                     setTimeout(() => {
                                                         dataChannel.send(encodeJson("send-file", i));
                                                     }, 2000)
                                                 }
+                                                else videoRef.current.pause();
                                             }
                                         }
                                     }

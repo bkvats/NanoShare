@@ -1,8 +1,5 @@
 import React from "react";
 import sizeConverter from "../utils/sizeConverter";
-import { IoIosPause } from "react-icons/io";
-import { IoMdClose } from "react-icons/io";
-import { MdKeyboardArrowDown } from "react-icons/md";
 import { MdOutlineFileDownloadDone } from "react-icons/md";
 import { MdDeleteOutline } from "react-icons/md";
 import FileIcon from "./FileIcon";
@@ -45,8 +42,6 @@ export default function SimpleProgressCard({ status = "completed", filename, fil
                             </div>
                 }
             </div>
-            {/* <button className="absolute bottom-2 text-2xl left-24 hover:bg-white hover:bg-opacity-30 p-1 rounded-full transition"><IoIosPause /></button>
-            <button className="absolute bottom-2 right-6 text-2xl hover:bg-white hover:bg-opacity-30 p-1 rounded-full transition"><MdKeyboardArrowDown /></button> */}
         </div>
     )
 }

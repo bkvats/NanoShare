@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { IoMdCloseCircleOutline } from "react-icons/io";
 import { FaHeartCircleBolt } from "react-icons/fa6";
 import { FaXTwitter } from "react-icons/fa6";
@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 export default function Header() {
     const [showSideBar, setShowSideBar] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
     const navLink = [
         {
             name: "Contact",
@@ -110,11 +111,17 @@ export default function Header() {
                         <ul className="flex flex-col gap-10 mx-4 mt-2 text-lg items-center">
                             {
                                 navLink.map((i) => (
-                                    <NavLink key={i.to} to={i.to} className={({ isActive }) => `${isActive && "border-b-2 pb-1"} hover:border-b-2 hover:pb-1`}>{i.name}</NavLink>
+                                    <button key={i.to} className={({ isActive }) => `${isActive && "border-b-2 pb-1"} hover:border-b-2 hover:pb-1`} onClick={() => {
+                                        setShowSideBar(false);
+                                        navigate(i.to);
+                                    }}>{i.name}</button>
                                 ))
                             }
                         </ul>
-                        <NavLink to={"/send"} className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10">Transfer now</NavLink>
+                        <button className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10" onClick={() => {
+                            setShowSideBar(false);
+                            navigate("/send");
+                        }}>Transfer now</button>
                     </nav>
                     <div className="text-xl py-2 px-16 border-light border-b-0 border-l-0 border-r-0 flex flex-col justify-center items-center gap-2 mb-10">
                         <div className="flex gap-2 items-center flex-wrap justify-center">
