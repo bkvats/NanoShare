@@ -25,11 +25,7 @@ export default function Send() {
     const [allowMultipleReceivers, setAllowMultipleReceivers] = useState(false);
     const videoRef = useRef(null);
     const dispatch = useDispatch();
-    useEffect(() => {
-        socket.on("connect", () => {
-            console.log("socket connected in send page", socket.id);
-        });
-    }, [step]);
+
     return (
         <>
             {
@@ -123,19 +119,12 @@ export default function Send() {
                                 });
 
                                 socket.on("setupNewConnection", async (receiverSocketId) => {
-                                    console.log(receiverSocketId, "trying to setup a new connection..");
                                     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
                                     peerConnections.set(receiverSocketId, pc);
                                     iceCandidates.set(receiverSocketId, []);
                                     remoteDescriptionSet.set(receiverSocketId, false);
                                     const dataChannel = pc.createDataChannel("dataChannel");
                                     dataChannel.binaryType = "arraybuffer";
-                                    dataChannel.onopen = () => {
-                                        console.log("Data channel is open on sender side");
-                                    }
-                                    dataChannel.onclose = () => {
-                                        console.log("Data channel is closed on sender side");
-                                    }
                                     function sendFile(file) {
                                         function sendNextChunk() {
                                             if (offset < file.size) {
@@ -145,13 +134,13 @@ export default function Send() {
                                                     offset += chunkSize;
                                                 }
                                                 else {
-                                                    console.log("Buffer is full please wait..");
                                                     setTimeout(sendNextChunk, 100);
                                                 }
 
                                             }
                                             else {
-                                                console.log("file sent succesfully");
+                                                console.log("File sent succesfully");
+                                                videoRef.current.pause();
                                             }
                                         }
                                         let offset = 0;
@@ -160,7 +149,6 @@ export default function Send() {
                                         fileReader.onload = (event) => {
                                             const chunk = event.target.result;
                                             dataChannel.send(chunk);
-                                            console.log("sent file of size:", chunk.byteLength);
                                             sendNextChunk();
                                         }
                                         sendNextChunk();
@@ -168,7 +156,6 @@ export default function Send() {
                                     dataChannel.onmessage = (event) => {
                                         const message = decodeJson(event.data);
                                         if (message.type === "get-files") {
-                                            console.log("sending file info");
                                             dataChannel.send(JSON.stringify({
                                                 type: "files", data: files.map((i, index) => {
                                                     return {
@@ -179,15 +166,18 @@ export default function Send() {
                                                         chunks: [],
                                                         received: 0,
                                                         startTime: 0,
+                                                        downloadUrl: ""
                                                     }
                                                 })
                                             }));
-                                            console.log("after sending file info");
                                         }
                                         else if (message.type === "send-file") {
-                                            console.log("sending file data");
+                                            videoRef.current.play();
                                             sendFile(files[message.data]);
                                         }
+                                    }
+                                    dataChannel.onclose = (_) => {
+                                        videoRef.current.pause();
                                     }
                                     pc.onicecandidate = (event) => {
                                         if (event.candidate) {
@@ -206,7 +196,6 @@ export default function Send() {
                                 });
 
                                 socket.on("sdp-answer", async ({ answer, receiverSocketId }) => {
-                                    console.log("got sdp answer from receiver:", answer);
                                     await peerConnections.get(receiverSocketId).setRemoteDescription(new RTCSessionDescription(answer));
                                     remoteDescriptionSet.set(receiverSocketId, true);
                                     iceCandidates.get(receiverSocketId).map((candidate) => {
@@ -220,14 +209,12 @@ export default function Send() {
                                         await peerConnections.get(receiverSocketId).addIceCandidate(new RTCIceCandidate(candidate));
                                     }
                                     else {
-                                        console.log("ICE candidate received before setting remote description");
                                         iceCandidates.get(receiverSocketId).push(candidate);
                                     }
                                 });
                             }
                             catch (error) {
                                 dispatch(displayToast({ message: "Something went wrong please try again !", type: "error" }));
-                                console.log("error is here", error);
                             }
                         }
                         else {

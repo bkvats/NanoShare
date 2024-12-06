@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
-import io from "socket.io-client";
+import React, { useState, useRef } from "react";
 import { GoDotFill } from "react-icons/go";
 import { MdOutlineBackspace } from "react-icons/md";
 import { GoArrowRight } from "react-icons/go";
@@ -90,7 +89,6 @@ export default function Receive() {
                                     if (response.success) {
                                         senderSocketId = response.data.socketId;
                                         socket.emit("setupNewConnection", { senderSocketId, receiverSocketId: socket.id });
-                                        dispatch(setIsLoading(false));
                                     }
                                     else {
                                         dispatch(setIsLoading(false));
@@ -111,9 +109,9 @@ export default function Receive() {
                                         if (typeof event.data === "string") {
                                             const message = decodeJson(event.data);
                                             if (message.type === "files") {
-                                                console.log("got files info");
                                                 fastFiles = [...message.data];
                                                 setFiles(fastFiles);
+                                                dispatch(setIsLoading(false));
                                                 setStep(prev => prev + 1);
                                             }
                                         }
@@ -131,9 +129,7 @@ export default function Receive() {
                                                 setTimeLeft((file.filesize - newSize) / speed);
                                                 return newSize;
                                             });
-                                            console.log("getting file chunk:", chunkData.byteLength);
                                             if (file.received == file.filesize) {
-                                                console.log("generating file for downloading...");
                                                 const blob = new Blob(file.chunks, { type: file.filetype });
                                                 const url = URL.createObjectURL(blob);
                                                 const a = document.createElement("a");
@@ -141,6 +137,7 @@ export default function Receive() {
                                                 a.download = file.filename;
                                                 a.click();
                                                 fastFiles[i].status = "completed";
+                                                fastFiles[i].downloadUrl = url;
                                                 i++;
                                                 fastFiles[i].status = "active";
                                                 setFiles([...fastFiles]);
@@ -153,12 +150,8 @@ export default function Receive() {
                                             }
                                         }
                                     }
-                                    dataChannel.onopen = () => {
-                                        console.log("Control channel is open");
-                                    }
                                 }
                                 socket.on("sdp-offer", async (offer) => {
-                                    console.log("got sdp offer on receiver side:", offer);
                                     await pc.setRemoteDescription(new RTCSessionDescription(offer));
                                     const answer = pc.createAnswer();
                                     await pc.setLocalDescription(answer);
@@ -185,7 +178,6 @@ export default function Receive() {
                             }
                             catch (error) {
                                 dispatch(displayToast({ message: "Something went wrong, Please try again!", type: "error" }));
-                                console.log(error.message);
                             }
                         }}><GoArrowRight /></button>
                     </div>
@@ -227,7 +219,7 @@ export default function Receive() {
                     <div className="border-0 overflow-auto w-[97%] lg:w-1/2">
                         {
                             files.map((file) => (
-                                <SimpleProgressCard {...file} status={file.status} speed={transferSpeed} timeLeft={timeLeft} receivedSize={fileReceivedSize} receivedPercentage={receivedpercentage} downloadurl={file.downloadurl} key={file.filename} />
+                                <SimpleProgressCard {...file} status={file.status} speed={transferSpeed} timeLeft={timeLeft} receivedSize={fileReceivedSize} receivedPercentage={receivedpercentage} downloadurl={file.downloadUrl} key={file.filename} />
                             ))
                         }
                     </div>
