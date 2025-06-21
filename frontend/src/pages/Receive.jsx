@@ -87,6 +87,7 @@ export default function Receive() {
                                 let senderSocketId = "";
                                 socket.emit("check-code", code.join(""), (response) => {
                                     if (response.success) {
+                                        dispatch(displayLoader("Connecting to sender..."));
                                         senderSocketId = response.data.socketId;
                                         socket.emit("setupNewConnection", { senderSocketId, receiverSocketId: socket.id });
                                     }
