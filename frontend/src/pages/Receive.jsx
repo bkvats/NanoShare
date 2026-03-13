@@ -73,7 +73,7 @@ let remoteDescSet=false;
 socket.off("sdp-offer");
 socket.off("ice-candidate");
 
-socket.on("sdp-offer",async(offer)=>{
+socket.on("sdp-offer",async({offer})=>{
 
 await pc.setRemoteDescription(new RTCSessionDescription(offer));
 remoteDescSet=true;
