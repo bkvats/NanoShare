@@ -123,6 +123,13 @@ receiverSocketId:socket.id
 }
 
 };
+pc.onconnectionstatechange = () => {
+    console.log("Connection State:", pc.connectionState);
+};
+
+pc.oniceconnectionstatechange = () => {
+    console.log("ICE State:", pc.iceConnectionState);
+};
 
 socket.emit("setupNewConnection",{
 senderSocketId,
