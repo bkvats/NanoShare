@@ -85,12 +85,11 @@ export default function Receive() {
                             try {
                                 dispatch(displayLoader("Verifying Code..."));
                                 let senderSocketId = "";
-                                let pc = null;
                                 socket.emit("check-code", code.join(""), (response) => {
                                     if (response.success) {
                                         dispatch(displayLoader("Connecting to sender..."));
                                         senderSocketId = response.data.socketId;
-                                        pc = new RTCPeerConnection({
+                                        const pc = new RTCPeerConnection({
                                             iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
                                         });
                                         socket.on("sdp-offer", async (offer) => {
@@ -124,6 +123,65 @@ export default function Receive() {
                                             senderSocketId,
                                             receiverSocketId: socket.id
                                         });
+                                        let fastFiles = [];
+                                        let i = 0;
+                                        pc.ondatachannel = (event) => {
+                                            const dataChannel = event.channel;
+                                            dataChannel.binaryType = "arraybuffer";
+                                            setControlChannel(dataChannel);
+                                            dataChannel.send(encodeJson("get-files"));
+                                            dataChannel.onmessage = (event) => {
+                                                if (typeof event.data === "string") {
+                                                    const message = decodeJson(event.data);
+                                                    if (message.type === "files") {
+                                                        fastFiles = [...message.data];
+                                                        setFiles(fastFiles);
+                                                        dispatch(setIsLoading(false));
+                                                        setStep(prev => prev + 1);
+                                                    }
+                                                }
+                                                else {
+                                                    const file = fastFiles[i];
+                                                    if (!file.startTime) file.startTime = Date.now();
+                                                    const chunkData = event.data;
+                                                    file.chunks.push(chunkData);
+                                                    file.received += chunkData.byteLength;
+                                                    setFileReceivedSize(prev => {
+                                                        const newSize = prev + chunkData.byteLength;
+                                                        setReceivedPercentage((newSize * 100 / file.filesize));
+                                                        const speed = (newSize / ((Date.now() - file.startTime) / 1000));
+                                                        setTransferSpeed(speed);
+                                                        setTimeLeft((file.filesize - newSize) / speed);
+                                                        return newSize;
+                                                    });
+                                                    if (file.received == file.filesize) {
+                                                        const blob = new Blob(file.chunks, { type: file.filetype });
+                                                        const url = URL.createObjectURL(blob);
+                                                        const a = document.createElement("a");
+                                                        a.href = url;
+                                                        a.download = `NanoShare_${file.filename}`;
+                                                        a.click();
+                                                        fastFiles[i].status = "completed";
+                                                        fastFiles[i].downloadUrl = url;
+                                                        i++;
+                                                        if (i < fastFiles.length) {
+                                                            fastFiles[i].status = "active";
+                                                        }
+                                                        setFiles([...fastFiles]);
+                                                        setFileReceivedSize(0);
+                                                        setReceivedPercentage(0);
+                                                        setTransferSpeed(0);
+                                                        setTimeLeft(0);
+                                                        if (i < fastFiles.length) {
+                                                            setTimeout(() => {
+                                                                dataChannel.send(encodeJson("send-file", i));
+                                                            }, 2000)
+                                                        }
+                                                        else videoRef.current.pause();
+                                            }
+                                        }
+                                    }
+                                }
                                     }
                                     else {
                                         dispatch(setIsLoading(false));
@@ -131,65 +189,6 @@ export default function Receive() {
                                         else if (response.statusCode == 404) dispatch(displayToast({ message: "Invalid Access Code !", type: "error" }));
                                     }
                                 });
-                                let fastFiles = [];
-                                let i = 0;
-                                pc.ondatachannel = (event) => {
-                                    const dataChannel = event.channel;
-                                    dataChannel.binaryType = "arraybuffer";
-                                    setControlChannel(dataChannel);
-                                    dataChannel.send(encodeJson("get-files"));
-                                    dataChannel.onmessage = (event) => {
-                                        if (typeof event.data === "string") {
-                                            const message = decodeJson(event.data);
-                                            if (message.type === "files") {
-                                                fastFiles = [...message.data];
-                                                setFiles(fastFiles);
-                                                dispatch(setIsLoading(false));
-                                                setStep(prev => prev + 1);
-                                            }
-                                        }
-                                        else {
-                                            const file = fastFiles[i];
-                                            if (!file.startTime) file.startTime = Date.now();
-                                            const chunkData = event.data;
-                                            file.chunks.push(chunkData);
-                                            file.received += chunkData.byteLength;
-                                            setFileReceivedSize(prev => {
-                                                const newSize = prev + chunkData.byteLength;
-                                                setReceivedPercentage((newSize * 100 / file.filesize));
-                                                const speed = (newSize / ((Date.now() - file.startTime) / 1000));
-                                                setTransferSpeed(speed);
-                                                setTimeLeft((file.filesize - newSize) / speed);
-                                                return newSize;
-                                            });
-                                            if (file.received == file.filesize) {
-                                                const blob = new Blob(file.chunks, { type: file.filetype });
-                                                const url = URL.createObjectURL(blob);
-                                                const a = document.createElement("a");
-                                                a.href = url;
-                                                a.download = `NanoShare_${file.filename}`;
-                                                a.click();
-                                                fastFiles[i].status = "completed";
-                                                fastFiles[i].downloadUrl = url;
-                                                i++;
-                                                if (i < fastFiles.length) {
-                                                    fastFiles[i].status = "active";
-                                                }
-                                                setFiles([...fastFiles]);
-                                                setFileReceivedSize(0);
-                                                setReceivedPercentage(0);
-                                                setTransferSpeed(0);
-                                                setTimeLeft(0);
-                                                if (i < fastFiles.length) {
-                                                    setTimeout(() => {
-                                                        dataChannel.send(encodeJson("send-file", i));
-                                                    }, 2000)
-                                                }
-                                                else videoRef.current.pause();
-                                            }
-                                        }
-                                    }
-                                }
                             }
                             catch (error) {
                                 console.log(error);
