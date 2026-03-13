@@ -85,11 +85,12 @@ export default function Receive() {
                             try {
                                 dispatch(displayLoader("Verifying Code..."));
                                 let senderSocketId = "";
+                                let pc = null;
                                 socket.emit("check-code", code.join(""), (response) => {
                                     if (response.success) {
                                         dispatch(displayLoader("Connecting to sender..."));
                                         senderSocketId = response.data.socketId;
-                                        const pc = new RTCPeerConnection({
+                                        pc = new RTCPeerConnection({
                                             iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
                                         });
                                         socket.on("sdp-offer", async (offer) => {
