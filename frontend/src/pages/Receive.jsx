@@ -191,6 +191,7 @@ export default function Receive() {
                                 }
                             }
                             catch (error) {
+                                console.log(error);
                                 dispatch(displayToast({ message: "Something went wrong, Please try again!", type: "error" }));
                             }
                         }}><GoArrowRight /></button>
