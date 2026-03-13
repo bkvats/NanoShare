@@ -46,17 +46,19 @@ export default function setupSocketIO(server) {
         socket.on("setupNewConnection", (ids) => {
             io.to(ids.senderSocketId).emit("setupNewConnection", ids.receiverSocketId);
         });
-
-        socket.on("sdp-offer", (data) => {
-            io.to(data.receiverSocketId).emit("sdp-offer", data.offer);
+        
+        socket.on("sdp-offer", ({ offer, receiverSocketId }) => {
+            if (!offer || !receiverSocketId) return;
+            io.to(receiverSocketId).emit("sdp-offer", offer);
         });
 
         socket.on("sdp-answer", (data) => {
             io.to(data.senderSocketId).emit("sdp-answer", { answer: data.answer, receiverSocketId: data.receiverSocketId });
         });
 
-        socket.on("ice-candidate", ({ candidate, anotherEndSocketId, receiverSocketId }) => {
-            io.to(anotherEndSocketId).emit("ice-candidate", { candidate, receiverSocketId });
+        socket.on("ice-candidate", ({ candidate, anotherEndSocketId }) => {
+            if (!candidate || !anotherEndSocketId) return;
+            io.to(anotherEndSocketId).emit("ice-candidate", { candidate });
         });
 
         socket.on("disconnect", async () => {
