@@ -52,17 +52,16 @@ const senderSocketId=response.data.socketId;
 
 const pc = new RTCPeerConnection({
   iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-
     {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject"
+      urls: "stun:stun.l.google.com:19302"
     },
     {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject"
+      urls: "stun:stun1.l.google.com:19302"
+    },
+    {
+      urls: "turn:relay1.expressturn.com:3478",
+      username: "efZ0M1ZGR0F6Z1hM",
+      credential: "Fq2wX0q0lP2h"
     }
   ]
 });
