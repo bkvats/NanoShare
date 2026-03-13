@@ -15,360 +15,379 @@ const socket = getSocket();
 
 export default function Receive() {
 
-    const [code, setCode] = useState([-1,-1,-1,-1,-1,-1]);
-    const [step,setStep] = useState(1);
-    const [files,setFiles] = useState([]);
-    const [controlChannel,setControlChannel] = useState(null);
+const [code,setCode]=useState([-1,-1,-1,-1,-1,-1]);
+const [step,setStep]=useState(1);
+const [files,setFiles]=useState([]);
+const [controlChannel,setControlChannel]=useState(null);
 
-    const [transferSpeed,setTransferSpeed] = useState(0);
-    const [receivedpercentage,setReceivedPercentage] = useState(0);
-    const [fileReceivedSize,setFileReceivedSize] = useState(0);
-    const [timeLeft,setTimeLeft] = useState(0);
+const [transferSpeed,setTransferSpeed]=useState(0);
+const [receivedpercentage,setReceivedPercentage]=useState(0);
+const [fileReceivedSize,setFileReceivedSize]=useState(0);
+const [timeLeft,setTimeLeft]=useState(0);
 
-    const videoRef = useRef(null);
-    const dispatch = useDispatch();
+const videoRef=useRef(null);
+const dispatch=useDispatch();
 
-    const connectToSender = () => {
+const connectToSender=()=>{
 
-        dispatch(displayLoader("Verifying Code..."));
+dispatch(displayLoader("Verifying Code..."));
 
-        socket.emit("check-code",code.join(""),(response)=>{
+socket.emit("check-code",code.join(""),(response)=>{
 
-            if(!response.success){
+if(!response.success){
 
-                dispatch(setIsLoading(false));
+dispatch(setIsLoading(false));
 
-                dispatch(displayToast({
-                    message:"Invalid Access Code!",
-                    type:"error"
-                }));
+dispatch(displayToast({
+message:"Invalid Access Code!",
+type:"error"
+}));
 
-                return;
-            }
+return;
+}
 
-            dispatch(displayLoader("Connecting to sender..."));
+dispatch(displayLoader("Connecting to sender..."));
 
-            const senderSocketId = response.data.socketId;
+const senderSocketId=response.data.socketId;
 
-            const pc = new RTCPeerConnection({
-                iceServers:[{urls:"stun:stun.l.google.com:19302"}]
-            });
+const pc=new RTCPeerConnection({
+iceServers:[{urls:"stun:stun.l.google.com:19302"}]
+});
 
-            let pendingCandidates = [];
-            let remoteDescSet = false;
+let pendingCandidates=[];
+let remoteDescSet=false;
 
-            socket.off("sdp-offer");
-            socket.off("ice-candidate");
+socket.off("sdp-offer");
+socket.off("ice-candidate");
 
-            socket.on("sdp-offer",async(offer)=>{
+socket.on("sdp-offer",async(offer)=>{
 
-                try{
+await pc.setRemoteDescription(new RTCSessionDescription(offer));
+remoteDescSet=true;
 
-                    await pc.setRemoteDescription(
-                        new RTCSessionDescription(offer)
-                    );
+for(const c of pendingCandidates){
+await pc.addIceCandidate(new RTCIceCandidate(c));
+}
 
-                    remoteDescSet = true;
+pendingCandidates=[];
 
-                    for(const c of pendingCandidates){
-                        await pc.addIceCandidate(new RTCIceCandidate(c));
-                    }
+const answer=await pc.createAnswer();
+await pc.setLocalDescription(answer);
 
-                    pendingCandidates = [];
+socket.emit("sdp-answer",{
+answer:pc.localDescription,
+senderSocketId,
+receiverSocketId:socket.id
+});
 
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
+});
 
-                    socket.emit("sdp-answer",{
-                        answer:pc.localDescription,
-                        senderSocketId,
-                        receiverSocketId:socket.id
-                    });
+socket.on("ice-candidate",async({candidate})=>{
 
-                }
-                catch(e){
-                    console.error(e);
-                }
+if(remoteDescSet)
+await pc.addIceCandidate(new RTCIceCandidate(candidate));
+else
+pendingCandidates.push(candidate);
 
-            });
+});
 
-            socket.on("ice-candidate",async({candidate})=>{
+pc.onicecandidate=(event)=>{
 
-                try{
+if(event.candidate){
 
-                    if(remoteDescSet)
-                        await pc.addIceCandidate(
-                            new RTCIceCandidate(candidate)
-                        );
-                    else
-                        pendingCandidates.push(candidate);
+socket.emit("ice-candidate",{
+candidate:event.candidate,
+anotherEndSocketId:senderSocketId,
+receiverSocketId:socket.id
+});
 
-                }
-                catch(e){
-                    console.error(e);
-                }
+}
 
-            });
+};
 
-            pc.onicecandidate=(event)=>{
+socket.emit("setupNewConnection",{
+senderSocketId,
+receiverSocketId:socket.id
+});
 
-                if(event.candidate){
+let fastFiles=[];
+let i=0;
 
-                    socket.emit("ice-candidate",{
-                        candidate:event.candidate,
-                        anotherEndSocketId:senderSocketId,
-                        receiverSocketId:socket.id
-                    });
+pc.ondatachannel=(event)=>{
 
-                }
+const dataChannel=event.channel;
+dataChannel.binaryType="arraybuffer";
 
-            };
+setControlChannel(dataChannel);
 
-            socket.emit("setupNewConnection",{
-                senderSocketId,
-                receiverSocketId:socket.id
-            });
+dataChannel.send(encodeJson("get-files"));
 
-            let fastFiles=[];
-            let i=0;
+dataChannel.onmessage=(event)=>{
 
-            pc.ondatachannel=(event)=>{
+if(typeof event.data==="string"){
 
-                const dataChannel = event.channel;
-                dataChannel.binaryType="arraybuffer";
+const message=decodeJson(event.data);
 
-                setControlChannel(dataChannel);
+if(message.type==="files"){
 
-                dataChannel.send(encodeJson("get-files"));
+fastFiles=[...message.data];
+setFiles(fastFiles);
 
-                dataChannel.onmessage=(event)=>{
+dispatch(setIsLoading(false));
+setStep(2);
 
-                    if(typeof event.data==="string"){
+}
 
-                        const message = decodeJson(event.data);
+}
+else{
 
-                        if(message.type==="files"){
+const file=fastFiles[i];
 
-                            fastFiles=[...message.data];
-                            setFiles(fastFiles);
+if(!file.startTime)
+file.startTime=Date.now();
 
-                            dispatch(setIsLoading(false));
-                            setStep(2);
+const chunk=event.data;
 
-                        }
+file.chunks.push(chunk);
+file.received+=chunk.byteLength;
 
-                    }
-                    else{
+setFileReceivedSize(prev=>{
 
-                        const file=fastFiles[i];
+const newSize=prev+chunk.byteLength;
 
-                        if(!file.startTime)
-                            file.startTime=Date.now();
+setReceivedPercentage((newSize*100)/file.filesize);
 
-                        const chunk=event.data;
+const speed=newSize/((Date.now()-file.startTime)/1000);
 
-                        file.chunks.push(chunk);
-                        file.received+=chunk.byteLength;
+setTransferSpeed(speed);
 
-                        setFileReceivedSize(prev=>{
+setTimeLeft((file.filesize-newSize)/speed);
 
-                            const newSize=prev+chunk.byteLength;
+return newSize;
 
-                            setReceivedPercentage(
-                                (newSize*100)/file.filesize
-                            );
+});
 
-                            const speed =
-                                newSize/((Date.now()-file.startTime)/1000);
+if(file.received===file.filesize){
 
-                            setTransferSpeed(speed);
+const blob=new Blob(file.chunks,{type:file.filetype});
 
-                            setTimeLeft(
-                                (file.filesize-newSize)/speed
-                            );
+const url=URL.createObjectURL(blob);
 
-                            return newSize;
+const a=document.createElement("a");
+a.href=url;
+a.download=`NanoShare_${file.filename}`;
+a.click();
 
-                        });
+fastFiles[i].status="completed";
+fastFiles[i].downloadUrl=url;
 
-                        if(file.received===file.filesize){
+i++;
 
-                            const blob=new Blob(
-                                file.chunks,
-                                {type:file.filetype}
-                            );
+if(i<fastFiles.length)
+fastFiles[i].status="active";
 
-                            const url=URL.createObjectURL(blob);
+setFiles([...fastFiles]);
 
-                            const a=document.createElement("a");
-                            a.href=url;
-                            a.download=`NanoShare_${file.filename}`;
-                            a.click();
+setFileReceivedSize(0);
+setReceivedPercentage(0);
+setTransferSpeed(0);
+setTimeLeft(0);
 
-                            fastFiles[i].status="completed";
-                            fastFiles[i].downloadUrl=url;
+if(i<fastFiles.length){
 
-                            i++;
+setTimeout(()=>{
+dataChannel.send(encodeJson("send-file",i));
+},1000);
 
-                            if(i<fastFiles.length)
-                                fastFiles[i].status="active";
+}
+else{
+videoRef.current.pause();
+}
 
-                            setFiles([...fastFiles]);
+}
 
-                            setFileReceivedSize(0);
-                            setReceivedPercentage(0);
-                            setTransferSpeed(0);
-                            setTimeLeft(0);
+}
 
-                            if(i<fastFiles.length){
+};
 
-                                setTimeout(()=>{
-                                    dataChannel.send(
-                                        encodeJson("send-file",i)
-                                    );
-                                },1000);
+};
 
-                            }
-                            else{
-                                videoRef.current.pause();
-                            }
+});
 
-                        }
+};
 
-                    }
+return(
+<>
 
-                };
+{step===1 &&
+<div>
 
-            };
+<p className="text-center text-4xl font-light my-10">
+Enter Access Key
+</p>
 
-        });
+<div className="w-full lg:w-1/2 flex justify-center gap-2 mx-auto">
+{code.map((i,index)=>(
+<GoDotFill
+key={index}
+className={`text-5xl ${i===-1?"text-gray-600":"text-white scale-110"} transition`}
+/>
+))}
+</div>
 
-    };
+<div className="py-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6 lg:gap-8">
 
-    return (
-        <>
-        {step===1 &&
-        <div>
+{"123456789".split("").map((number)=>(
+<button
+key={number}
+className="px-4 py-2"
+onClick={()=>{
 
-            <p className="text-center text-4xl font-light my-10">
-                Enter Access Key
-            </p>
+const arr=[...code];
+const idx=arr.indexOf(-1);
 
-            <div className="w-full lg:w-1/2 flex justify-center gap-2 mx-auto">
-            {code.map((i,index)=>(
-                <GoDotFill
-                key={index}
-                className={`text-5xl ${
-                    i===-1?"text-gray-600":"text-white scale-110"
-                }`}
-                />
-            ))}
-            </div>
+if(idx!==-1){
+arr[idx]=Number(number);
+setCode(arr);
+}
 
-            <div className="py-10 text-4xl mx-auto grid grid-cols-3 w-fit gap-6">
+}}>
+{number}
+</button>
+))}
 
-            {"123456789".split("").map(n=>(
-                <button
-                key={n}
-                onClick={()=>{
-                    const arr=[...code];
-                    const idx=arr.indexOf(-1);
-                    if(idx!==-1){
-                        arr[idx]=Number(n);
-                        setCode(arr);
-                    }
-                }}>
-                {n}
-                </button>
-            ))}
+<button
+className="px-4 py-2"
+onClick={()=>{
+const arr=[...code];
+for(let i=5;i>=0;i--){
+if(arr[i]!==-1){
+arr[i]=-1;
+break;
+}
+}
+setCode(arr);
+}}>
+<MdOutlineBackspace/>
+</button>
 
-            <button onClick={()=>{
-                const arr=[...code];
-                for(let i=5;i>=0;i--){
-                    if(arr[i]!==-1){
-                        arr[i]=-1;
-                        break;
-                    }
-                }
-                setCode(arr);
-            }}>
-            <MdOutlineBackspace/>
-            </button>
+<button
+className="px-4 py-2"
+onClick={()=>{
 
-            <button onClick={()=>{
-                if(code.includes(-1)){
-                    dispatch(displayToast({
-                        message:"Enter access code first!",
-                        type:"error"
-                    }));
-                    return;
-                }
+const arr=[...code];
+const idx=arr.indexOf(-1);
 
-                connectToSender();
+if(idx!==-1){
+arr[idx]=0;
+setCode(arr);
+}
 
-            }}>
-            <GoArrowRight/>
-            </button>
+}}>
+0
+</button>
 
-            </div>
+<button
+className="px-4 py-2"
+onClick={()=>{
 
-        </div>
-        }
+if(code.includes(-1)){
+dispatch(displayToast({
+message:"Enter access code first!",
+type:"error"
+}));
+return;
+}
 
-        {step===2 &&
-        <div className="flex flex-col items-center">
+connectToSender();
 
-            <p className="text-2xl my-8">
-                {files.length} file/s
-            </p>
+}}>
+<GoArrowRight/>
+</button>
 
-            <button
-            className="bg-white text-black px-6 py-2 rounded-full"
-            onClick={()=>{
-                controlChannel.send(
-                    encodeJson("send-file",0)
-                );
-                setStep(3);
-            }}>
-            Receive
-            </button>
+</div>
 
-        </div>
-        }
+</div>
+}
 
-        {step===3 &&
-        <div className="flex justify-center">
+{step===2 &&
+<div className="flex flex-col items-center">
 
-            <div className="fixed bottom-0">
-                <video
-                style={{height:"calc(100vh - 8.5rem)"}}
-                ref={videoRef}
-                src="https://hrcdn.net/fcore/assets/onboarding/globe-5fdfa9a0f4.mp4"
-                autoPlay
-                loop
-                />
-            </div>
+<p className="text-2xl my-8 text-white-light font-light">
+Total <span className="text-white font-black">{`${files.length} file/s`}</span> of
+<span className="text-white font-black">
+{`${sizeConverter(files.map(i=>i.filesize).reduce((a,b)=>a+b))}`}
+</span>
+</p>
 
-            <div className="w-[97%] lg:w-1/2">
+<div className="border-white border-dashed border rounded-2xl text-2xl w-[97%] lg:w-1/2 h-80 p-4 flex flex-wrap overflow-y-auto gap-2 justify-evenly items-start">
 
-            {files.map(file=>(
-                <SimpleProgressCard
-                key={file.filename}
-                {...file}
-                status={file.status}
-                speed={transferSpeed}
-                timeLeft={timeLeft}
-                receivedSize={fileReceivedSize}
-                receivedPercentage={receivedpercentage}
-                downloadurl={file.downloadUrl}
-                />
-            ))}
+{files.map((file,index)=>(
+<div key={index} className="max-w-24 px-2 max-h-36 overflow-hidden flex flex-col gap-2 my-4">
 
-            </div>
+<span className="text-5xl self-center">
+<FileIcon filename={file.filename} filetype={file.filetype}/>
+</span>
 
-        </div>
-        }
+<p className="text-base line-clamp-3 font-light text-center">
+{file.filename}
+</p>
 
-        </>
-    );
+</div>
+))}
+
+</div>
+
+<button
+className="bg-white text-black rounded-full text-lg py-2 px-4 font-normal my-10 hover:scale-110 transition"
+onClick={()=>{
+
+controlChannel.send(encodeJson("send-file",0));
+setStep(3);
+
+}}
+>
+Receive
+</button>
+
+</div>
+}
+
+{step===3 &&
+<div className="flex justify-center">
+
+<div className="fixed bottom-0">
+<video
+style={{height:"calc(100vh - 8.5rem)"}}
+ref={videoRef}
+src="https://hrcdn.net/fcore/assets/onboarding/globe-5fdfa9a0f4.mp4"
+className="object-cover object-center"
+autoPlay
+loop
+/>
+</div>
+
+<div className="border-0 overflow-auto w-[97%] lg:w-1/2">
+
+{files.map((file)=>(
+<SimpleProgressCard
+{...file}
+key={file.filename}
+status={file.status}
+speed={transferSpeed}
+timeLeft={timeLeft}
+receivedSize={fileReceivedSize}
+receivedPercentage={receivedpercentage}
+downloadurl={file.downloadUrl}
+/>
+))}
+
+</div>
+
+</div>
+}
+
+</>
+);
+
 }
