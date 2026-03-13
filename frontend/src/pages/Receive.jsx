@@ -73,25 +73,31 @@ let remoteDescSet=false;
 socket.off("sdp-offer");
 socket.off("ice-candidate");
 
-socket.on("sdp-offer",async({offer})=>{
+socket.on("sdp-offer", async (offer) => {
 
-await pc.setRemoteDescription(new RTCSessionDescription(offer));
-remoteDescSet=true;
+    if (!offer || !offer.type) {
+        console.error("Invalid SDP offer:", offer);
+        return;
+    }
 
-for(const c of pendingCandidates){
-await pc.addIceCandidate(new RTCIceCandidate(c));
-}
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
 
-pendingCandidates=[];
+    remoteDescSet = true;
 
-const answer=await pc.createAnswer();
-await pc.setLocalDescription(answer);
+    for (const c of pendingCandidates) {
+        await pc.addIceCandidate(new RTCIceCandidate(c));
+    }
 
-socket.emit("sdp-answer",{
-answer:pc.localDescription,
-senderSocketId,
-receiverSocketId:socket.id
-});
+    pendingCandidates = [];
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    socket.emit("sdp-answer", {
+        answer: pc.localDescription,
+        senderSocketId,
+        receiverSocketId: socket.id
+    });
 
 });
 
