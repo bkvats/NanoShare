@@ -110,6 +110,7 @@ pendingCandidates.push(candidate);
 });
 
 pc.onicecandidate=(event)=>{
+  console.log("ICE candidate:", event.candidate);
 
 if(event.candidate){
 
@@ -129,7 +130,6 @@ pc.onconnectionstatechange = () => {
 pc.oniceconnectionstatechange = () => {
     console.log("ICE State:", pc.iceConnectionState);
 };
-
 socket.emit("setupNewConnection",{
 senderSocketId,
 receiverSocketId:socket.id
