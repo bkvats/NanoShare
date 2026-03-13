@@ -16,7 +16,7 @@ export default function setupSocketIO(server) {
                 let code = "";
                 do {
                     code = `${Math.floor(100000 + Math.random() * 900000)}`;
-                } while (await !AccessCode.findOne({ accessCode: code }));
+                } while (await AccessCode.findOne({ accessCode: code }));
                 await AccessCode.create({ accessCode: code, socketId: socket.id });
                 callback(apiResponse(200, "Access code mapped successfully", { code }));
             })();
