@@ -87,9 +87,42 @@ export default function Receive() {
                                 let senderSocketId = "";
                                 socket.emit("check-code", code.join(""), (response) => {
                                     if (response.success) {
-                                        // dispatch(displayLoader("Connecting to sender..."));
+                                        dispatch(displayLoader("Connecting to sender..."));
                                         senderSocketId = response.data.socketId;
-                                        socket.emit("setupNewConnection", { senderSocketId, receiverSocketId: socket.id });
+                                        const pc = new RTCPeerConnection({
+                                            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+                                        });
+                                        socket.on("sdp-offer", async (offer) => {
+                                            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                                
+                                            const answer = await pc.createAnswer();
+                                            await pc.setLocalDescription(answer);
+                                
+                                            socket.emit("sdp-answer", {
+                                                answer: pc.localDescription,
+                                                senderSocketId,
+                                                receiverSocketId: socket.id
+                                            });
+                                        });
+                                
+                                        socket.on("ice-candidate", async ({ candidate }) => {
+                                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                                        });
+                                
+                                        pc.onicecandidate = (event) => {
+                                            if (event.candidate) {
+                                                socket.emit("ice-candidate", {
+                                                    candidate: event.candidate,
+                                                    anotherEndSocketId: senderSocketId,
+                                                    receiverSocketId: socket.id
+                                                });
+                                            }
+                                        };
+                                        
+                                        socket.emit("setupNewConnection", {
+                                            senderSocketId,
+                                            receiverSocketId: socket.id
+                                        });
                                     }
                                     else {
                                         dispatch(setIsLoading(false));
@@ -97,8 +130,6 @@ export default function Receive() {
                                         else if (response.statusCode == 404) dispatch(displayToast({ message: "Invalid Access Code !", type: "error" }));
                                     }
                                 });
-
-                                const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
                                 let fastFiles = [];
                                 let i = 0;
                                 pc.ondatachannel = (event) => {
@@ -140,7 +171,9 @@ export default function Receive() {
                                                 fastFiles[i].status = "completed";
                                                 fastFiles[i].downloadUrl = url;
                                                 i++;
-                                                fastFiles[i].status = "active";
+                                                if (i < fastFiles.length) {
+                                                    fastFiles[i].status = "active";
+                                                }
                                                 setFiles([...fastFiles]);
                                                 setFileReceivedSize(0);
                                                 setReceivedPercentage(0);
@@ -156,30 +189,6 @@ export default function Receive() {
                                         }
                                     }
                                 }
-                                socket.on("sdp-offer", async (offer) => {
-                                    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                                    const answer = pc.createAnswer();
-                                    await pc.setLocalDescription(answer);
-                                    socket.emit("sdp-answer", {
-                                        answer: pc.localDescription,
-                                        senderSocketId,
-                                        receiverSocketId: socket.id
-                                    });
-                                });
-
-                                pc.onicecandidate = (event) => {
-                                    if (event.candidate) {
-                                        socket.emit("ice-candidate", {
-                                            candidate: event.candidate,
-                                            anotherEndSocketId: senderSocketId,
-                                            receiverSocketId: socket.id
-                                        });
-                                    }
-                                }
-
-                                socket.on("ice-candidate", async ({ candidate }) => {
-                                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                                });
                             }
                             catch (error) {
                                 dispatch(displayToast({ message: "Something went wrong, Please try again!", type: "error" }));
