@@ -119,22 +119,21 @@ export default function Send() {
                                 });
 
                                 socket.on("setupNewConnection", async (receiverSocketId) => {
-                                    const pc = new RTCPeerConnection({
-                                                  iceServers: [
-                                                    { urls: "stun:stun.l.google.com:19302" },
-                                                
-                                                    {
-                                                      urls: "turn:openrelay.metered.ca:80",
-                                                      username: "openrelayproject",
-                                                      credential: "openrelayproject"
-                                                    },
-                                                    {
-                                                      urls: "turn:openrelay.metered.ca:443",
-                                                      username: "openrelayproject",
-                                                      credential: "openrelayproject"
-                                                    }
-                                                  ]
-                                                });
+                                   const pc = new RTCPeerConnection({
+                                      iceServers: [
+                                        {
+                                          urls: "stun:stun.l.google.com:19302"
+                                        },
+                                        {
+                                          urls: "stun:stun1.l.google.com:19302"
+                                        },
+                                        {
+                                          urls: "turn:relay1.expressturn.com:3478",
+                                          username: "efZ0M1ZGR0F6Z1hM",
+                                          credential: "Fq2wX0q0lP2h"
+                                        }
+                                      ]
+                                    });
                                     peerConnections.set(receiverSocketId, pc);
                                     iceCandidates.set(receiverSocketId, []);
                                     remoteDescriptionSet.set(receiverSocketId, false);
@@ -208,6 +207,9 @@ export default function Send() {
                                         
                                         pc.oniceconnectionstatechange = () => {
                                             console.log("ICE State:", pc.iceConnectionState);
+                                    };
+                                    pc.onicecandidate = e => {
+                                      console.log("ICE candidate:", e.candidate);
                                     };
                                     const offer = await pc.createOffer();
                                     await pc.setLocalDescription(offer);
