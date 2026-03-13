@@ -194,6 +194,7 @@ export default function Send() {
                                         videoRef.current.pause();
                                     }
                                     pc.onicecandidate = (event) => {
+                                        cconsole.log("ICE candidate:", event.candidate);
                                         if (event.candidate) {
                                             socket.emit("ice-candidate", {
                                                 candidate: event.candidate,
@@ -207,9 +208,6 @@ export default function Send() {
                                         
                                         pc.oniceconnectionstatechange = () => {
                                             console.log("ICE State:", pc.iceConnectionState);
-                                    };
-                                    pc.onicecandidate = e => {
-                                      console.log("ICE candidate:", e.candidate);
                                     };
                                     const offer = await pc.createOffer();
                                     await pc.setLocalDescription(offer);
