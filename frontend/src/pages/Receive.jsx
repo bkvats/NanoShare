@@ -52,28 +52,20 @@ const senderSocketId=response.data.socketId;
 
 const pc = new RTCPeerConnection({
   iceServers: [
-
     { urls: "stun:stun.l.google.com:19302" },
 
     {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject"
+      urls: [
+        "turn:global.turn.twilio.com:3478?transport=udp",
+        "turn:global.turn.twilio.com:3478?transport=tcp",
+        "turn:global.turn.twilio.com:443?transport=tcp"
+      ],
+      username: "demo",
+      credential: "demo"
     }
-
   ]
 });
-
+  
 let pendingCandidates=[];
 let remoteDescSet=false;
 
