@@ -119,7 +119,22 @@ export default function Send() {
                                 });
 
                                 socket.on("setupNewConnection", async (receiverSocketId) => {
-                                    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+                                    const pc = new RTCPeerConnection({
+                                                  iceServers: [
+                                                    { urls: "stun:stun.l.google.com:19302" },
+                                                
+                                                    {
+                                                      urls: "turn:openrelay.metered.ca:80",
+                                                      username: "openrelayproject",
+                                                      credential: "openrelayproject"
+                                                    },
+                                                    {
+                                                      urls: "turn:openrelay.metered.ca:443",
+                                                      username: "openrelayproject",
+                                                      credential: "openrelayproject"
+                                                    }
+                                                  ]
+                                                });
                                     peerConnections.set(receiverSocketId, pc);
                                     iceCandidates.set(receiverSocketId, []);
                                     remoteDescriptionSet.set(receiverSocketId, false);
